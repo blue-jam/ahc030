@@ -1,6 +1,7 @@
 #include <bits/stdc++.h>
 #include <random>
 
+static const double EPS = 1e-15;
 using namespace std;
 
 using ll = long long;
@@ -30,7 +31,7 @@ double calc_ent(const ll &N, const vector<vector<double>> &prob) {
     double mx_ent = 0.0;
     for (ll i = 0; i < N; i++) {
         for (ll j = 0; j < N; j++) {
-            mx_ent = max(mx_ent, min(prob[i][j], 1 - prob[i][j]));
+            mx_ent = max(mx_ent, min(prob[i][j], abs(1 - prob[i][j])));
         }
     }
     return mx_ent;
@@ -115,7 +116,7 @@ void prob_naive2(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt
         remaining += s[i].size();
     }
 
-    while (remaining >= 0) {
+    while (remaining > 0) {
         vector<vector<vector<double>>> prob_each(M, vector<vector<double>>(N, vector<double>(N, 0)));
 
         for (ll k = 0; k < M; k++) {
@@ -132,11 +133,9 @@ void prob_naive2(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt
                     }
                     if (ok) {
                         cnt++;
-                    }
-                    for (ll l = 0; l < s[k].size(); l++) {
-                        ll i = s[k].ps[l].i;
-                        ll j = s[k].ps[l].j;
-                        if (field[si + i][sj + j] < 0) {
+                        for (ll l = 0; l < s[k].size(); l++) {
+                            ll i = s[k].ps[l].i;
+                            ll j = s[k].ps[l].j;
                             prob_each[k][si + i][sj + j] += 1;
                         }
                     }
@@ -161,11 +160,11 @@ void prob_naive2(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt
         }
 
         double mx_ent = calc_ent(N, prob);
-        if (mx_ent < 1e-15) {
+        if (mx_ent < EPS) {
             ll c = naive_matcher(N, M, e, s, field, prob);
 
             double m = calc_ent(N, prob);
-            if (m < 1e-15) {
+            if (m < EPS) {
                 for (ll i = 0; i < N; i++) {
                     for (ll j = 0; j < N; j++) {
                         if (prob[i][j] > 0) {
@@ -259,7 +258,7 @@ void prob_naive(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt1
             ll c = naive_matcher(N, M, e, s, field, prob);
 
             double mx_ent = calc_ent(N, prob);
-            if (mx_ent < 1e-9) {
+            if (mx_ent < EPS) {
                 for (ll i = 0; i < N; i++) {
                     for (ll j = 0; j < N; j++) {
                         if (prob[i][j] > 0) {
@@ -278,7 +277,7 @@ void prob_naive(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt1
         }
 
         double mx_ent = calc_ent(N, prob);
-        if (mx_ent < 1e-15) {
+        if (mx_ent < EPS) {
             for (ll i = 0; i < N; i++) {
                 for (ll j = 0; j < N; j++) {
                     prob[i][j] = 0;
@@ -286,7 +285,7 @@ void prob_naive(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt1
             }
             ll c = naive_matcher(N, M, e, s, field, prob);
             mx_ent = calc_ent(N, prob);
-            if (mx_ent < 1e-9) {
+            if (mx_ent < EPS) {
                 for (ll i = 0; i < N; i++) {
                     for (ll j = 0; j < N; j++) {
                         if (prob[i][j] > 0) {
@@ -390,11 +389,7 @@ int main() {
         s.push_back(st);
     }
 
-    if (M <= 4) {
-        prob_naive2(N, M, e, s, rnd);
-    } else {
-        naive_solver(N, M, e, s, rnd);
-    }
+    prob_naive2(N, M, e, s, rnd);
 
     return 0;
 }

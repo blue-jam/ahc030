@@ -1,0 +1,9 @@
+*.out
+
+/.idea
+/cmake-build-debug
+
+/tools/target
+
+/out
+/vis.html

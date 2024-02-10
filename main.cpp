@@ -36,7 +36,7 @@ double calc_ent(const ll &N, const vector<vector<double>> &prob) {
     return mx_ent;
 }
 
-ll naive_matcher(
+ll dfs(
         const ll &n, const ll &m, const double &e,
         vector<stamp> &s,
         vector<vector<ll>> &field,
@@ -74,7 +74,7 @@ ll naive_matcher(
                 }
             }
             if (ok) {
-                cnt += naive_matcher(n, m, e, s, field, prob, k + 1, f2);
+                cnt += dfs(n, m, e, s, field, prob, k + 1, f2);
             }
             for (ll l = 0; l < s[k].size(); l++) {
                 ll i = s[k].ps[l].i;
@@ -85,6 +85,129 @@ ll naive_matcher(
     }
 
     return cnt;
+}
+
+ll naive_matcher(
+        const ll &n, const ll &m, const double &e,
+        vector<stamp> &s,
+        vector<vector<ll>> &field,
+        vector<vector<double>> &prob) {
+    for (ll i = 0; i < n; i++) {
+        for (ll j = 0; j < n; j++) {
+            prob[i][j] = 0;
+        }
+    }
+    vector<vector<ll>> f2(n, vector<ll>(n, 0));
+    ll c = dfs(n, m, e, s, field, prob, 0, f2);
+    for (ll i = 0; i < n; i++) {
+        for (ll j = 0; j < n; j++) {
+            prob[i][j] /= c;
+        }
+    }
+    return c;
+}
+
+void prob_naive2(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19937 &rnd) {
+    vector<vector<ll>> field(N, vector<ll>(N, -1));
+
+    ll remaining = 0;
+    for (ll i = 0; i < M; i++) {
+        remaining += s[i].size();
+    }
+
+    while (remaining >= 0) {
+        vector<vector<vector<double>>> prob_each(M, vector<vector<double>>(N, vector<double>(N, 0)));
+
+        for (ll k = 0; k < M; k++) {
+            ll cnt = 0;
+            for (ll si = 0; si + s[k].h <= N; si++) {
+                for (ll sj = 0; sj + s[k].w <= N; sj++) {
+                    bool ok = true;
+                    for (ll l = 0; l < s[k].size(); l++) {
+                        ll i = s[k].ps[l].i;
+                        ll j = s[k].ps[l].j;
+                        if (field[si + i][sj + j] == 0) {
+                            ok = false;
+                        }
+                    }
+                    if (ok) {
+                        cnt++;
+                    }
+                    for (ll l = 0; l < s[k].size(); l++) {
+                        ll i = s[k].ps[l].i;
+                        ll j = s[k].ps[l].j;
+                        if (field[si + i][sj + j] < 0) {
+                            prob_each[k][si + i][sj + j] += 1;
+                        }
+                    }
+                }
+            }
+            for (ll i = 0; i < N; i++) {
+                for (ll j = 0; j < N; j++) {
+                    prob_each[k][i][j] /= cnt;
+                }
+            }
+        }
+
+        vector<vector<double>> prob(N, vector<double>(N, 0));
+        for (ll i = 0; i < N; i++) {
+            for (ll j = 0; j < N; j++) {
+                double p = 1.0;
+                for (ll k = 0; k < M; k++) {
+                    p *= 1 - prob_each[k][i][j];
+                }
+                prob[i][j] = 1 - p;
+            }
+        }
+
+        double mx_ent = calc_ent(N, prob);
+        if (mx_ent < 1e-15) {
+            ll c = naive_matcher(N, M, e, s, field, prob);
+
+            double m = calc_ent(N, prob);
+            if (m < 1e-15) {
+                for (ll i = 0; i < N; i++) {
+                    for (ll j = 0; j < N; j++) {
+                        if (prob[i][j] > 0) {
+                            field[i][j] = 1;
+                        }
+                    }
+                }
+                break;
+            }
+        }
+
+        ll gi = -1, gj = -1;
+        for (ll i = 0; i < N; i++) {
+            for (ll j = 0; j < N; j++) {
+                if (field[i][j] < 0 && (gi < 0 || abs(prob[i][j] - 0.5) < abs(prob[gi][gj] - 0.5))) {
+                    gi = i;
+                    gj = j;
+                }
+            }
+        }
+        cout << "q 1 " << gi << " " << gj << endl;
+        flush(cout);
+        ll v;
+        cin >> v;
+        field[gi][gj] = v;
+
+        remaining -= v;
+    }
+
+    vector<P> result;
+    for (ll i = 0; i < N; i++) {
+        for (ll j = 0; j < N; j++) {
+            if (field[i][j] > 0) {
+                result.emplace_back(i, j);
+            }
+        }
+    }
+
+    cout << "a " << result.size();
+    for (auto r: result) {
+        cout << " " << r.i << " " << r.j;
+    }
 }
 
 void prob_naive(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19937 &rnd) {
@@ -133,13 +256,7 @@ void prob_naive(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt1
 
         if (cnt == 0) {
             vector<vector<ll>> f2(N, vector<ll>(N, 0));
-            ll c = naive_matcher(N, M, e, s, field, prob, 0, f2);
-
-            for (ll i = 0; i < N; i++) {
-                for (ll j = 0; j < N; j++) {
-                    prob[i][j] /= c;
-                }
-            }
+            ll c = naive_matcher(N, M, e, s, field, prob);
 
             double mx_ent = calc_ent(N, prob);
             if (mx_ent < 1e-9) {
@@ -161,18 +278,13 @@ void prob_naive(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt1
         }
 
         double mx_ent = calc_ent(N, prob);
-        if (mx_ent < 1e-9) {
+        if (mx_ent < 1e-15) {
             for (ll i = 0; i < N; i++) {
                 for (ll j = 0; j < N; j++) {
                     prob[i][j] = 0;
                 }
             }
-            ll c = naive_matcher(N, M, e, s, field, prob, 0, field);
-            for (ll i = 0; i < N; i++) {
-                for (ll j = 0; j < N; j++) {
-                    prob[i][j] /= c;
-                }
-            }
+            ll c = naive_matcher(N, M, e, s, field, prob);
             mx_ent = calc_ent(N, prob);
             if (mx_ent < 1e-9) {
                 for (ll i = 0; i < N; i++) {
@@ -278,8 +390,8 @@ int main() {
         s.push_back(st);
     }
 
-    if (N <= 15 && M <= 2) {
-        prob_naive(N, M, e, s, rnd);
+    if (M <= 4) {
+        prob_naive2(N, M, e, s, rnd);
     } else {
         naive_solver(N, M, e, s, rnd);
     }

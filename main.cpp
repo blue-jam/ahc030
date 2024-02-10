@@ -209,126 +209,6 @@ void prob_naive2(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt
     }
 }
 
-void prob_naive(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19937 &rnd) {
-    vector<vector<ll>> field(N, vector<ll>(N, -1));
-
-    ll remaining = 0;
-    for (ll i = 0; i < M; i++) {
-        remaining += s[i].size();
-    }
-
-    while (remaining > 0) {
-        const ll trial = 2000;
-        ll cnt = 0;
-
-        vector<vector<double>> prob(N, vector<double>(N, 0));
-        for (ll t = 0; t < trial; t++) {
-            vector<vector<ll>> f2(N, vector<ll>(N, 0));
-            for (ll k = 0; k < M; k++) {
-                ll si = next_long(rnd, 0, N - s[k].h + 1);
-                ll sj = next_long(rnd, 0, N - s[k].w + 1);
-                for (ll l = 0; l < s[k].size(); l++) {
-                    ll i = s[k].ps[l].i;
-                    ll j = s[k].ps[l].j;
-                    f2[si + i][sj + j] += 1;
-                }
-            }
-            bool ok = true;
-            for (ll i = 0; i < N; i++) {
-                for (ll j = 0; j < N; j++) {
-                    if (field[i][j] >= 0 && field[i][j] != f2[i][j]) {
-                        ok = false;
-                    }
-                }
-            }
-            if (ok) {
-                cnt++;
-                for (ll i = 0; i < N; i++) {
-                    for (ll j = 0; j < N; j++) {
-                        if (f2[i][j] > 0) {
-                            prob[i][j] += 1;
-                        }
-                    }
-                }
-            }
-        }
-
-        if (cnt == 0) {
-            vector<vector<ll>> f2(N, vector<ll>(N, 0));
-            ll c = naive_matcher(N, M, e, s, field, prob);
-
-            double mx_ent = calc_ent(N, prob);
-            if (mx_ent < EPS) {
-                for (ll i = 0; i < N; i++) {
-                    for (ll j = 0; j < N; j++) {
-                        if (prob[i][j] > 0) {
-                            field[i][j] = 1;
-                        }
-                    }
-                }
-                break;
-            }
-        } else {
-            for (ll i = 0; i < N; i++) {
-                for (ll j = 0; j < N; j++) {
-                    prob[i][j] /= cnt;
-                }
-            }
-        }
-
-        double mx_ent = calc_ent(N, prob);
-        if (mx_ent < EPS) {
-            for (ll i = 0; i < N; i++) {
-                for (ll j = 0; j < N; j++) {
-                    prob[i][j] = 0;
-                }
-            }
-            ll c = naive_matcher(N, M, e, s, field, prob);
-            mx_ent = calc_ent(N, prob);
-            if (mx_ent < EPS) {
-                for (ll i = 0; i < N; i++) {
-                    for (ll j = 0; j < N; j++) {
-                        if (prob[i][j] > 0) {
-                            field[i][j] = 1;
-                        }
-                    }
-                }
-                break;
-            }
-        }
-
-        ll gi = -1, gj = -1;
-        for (ll i = 0; i < N; i++) {
-            for (ll j = 0; j < N; j++) {
-                if (field[i][j] < 0 && (gi < 0 || abs(prob[i][j] - 0.5) < abs(prob[gi][gj] - 0.5))) {
-                    gi = i;
-                    gj = j;
-                }
-            }
-        }
-        cout << "q 1 " << gi << " " << gj << endl;
-        flush(cout);
-        ll v;
-        cin >> v;
-        field[gi][gj] = v;
-        remaining -= v;
-    }
-
-    vector<P> result;
-    for (ll i = 0; i < N; i++) {
-        for (ll j = 0; j < N; j++) {
-            if (field[i][j] > 0) {
-                result.emplace_back(i, j);
-            }
-        }
-    }
-
-    cout << "a " << result.size();
-    for (auto r: result) {
-        cout << " " << r.i << " " << r.j;
-    }
-}
-
 void naive_solver(ll N, ll M, double e, vector<stamp> &s, mt19937 &rnd) {
     ll sum = 0;
     for (ll i = 0; i < M; i++) {
@@ -377,7 +257,7 @@ int main() {
         ll d;
         cin >> d;
 
-        ll li = 0, lj = 0, ui = 0, uj = 0;
+        ll ui = 0, uj = 0;
         for (ll j = 0; j < d; j++) {
             ll a, b;
             cin >> a >> b;

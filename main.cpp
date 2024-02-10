@@ -10,6 +10,11 @@ struct P {
 };
 
 void naive_solver(ll N, ll M, double e, vector<vector<P>> p) {
+    ll sum = 0;
+    for (ll i = 0; i < M; i++) {
+        sum += p[i].size();
+    }
+
     vector<P> result;
     for (ll i = 0; i < N; i++) {
         for (ll j = 0; j < N; j++) {
@@ -20,6 +25,13 @@ void naive_solver(ll N, ll M, double e, vector<vector<P>> p) {
             if (v > 0) {
                 result.emplace_back(i, j);
             }
+            sum -= v;
+            if (sum == 0) {
+                break;
+            }
+        }
+        if (sum == 0) {
+            break;
         }
     }
 

@@ -1,7 +1,7 @@
 #include <bits/stdc++.h>
 #include <random>
 
-static const double EPS = 1e-15;
+static const double EPS = 1e-6;
 using namespace std;
 
 using ll = long long;
@@ -119,12 +119,10 @@ void color_probability(const ll &N, const vector<vector<double>> &prob) {
     }
 }
 
-void prob_naive2(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19937 &rnd) {
-    vector<vector<ll>> field(N, vector<ll>(N, -1));
+const double PP = 0.01;
 
+void calc_init_prob(const ll &N, vector<vector<double>> &init_prob) {
     const ll SN = min(sqrt(N), 3.0);
-    vector<vector<double>> init_prob(N, vector<double>(N, 1.0));
-
     for (ll si = 0; si < N; si += SN) {
         for (ll sj = 0; sj < N; sj += SN) {
             vector<P> ps;
@@ -144,66 +142,107 @@ void prob_naive2(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt
             if (v == 0) {
                 for (ll i = 0; si + i < min(si + SN, N); i++) {
                     for (ll j = 0; sj + j < min(sj + SN, N); j++) {
-                        init_prob[si + i][sj + j] = 0.01;
+                        init_prob[si + i][sj + j] = PP;
                     }
                 }
             }
         }
     }
+}
 
-    ll remaining = 0;
+ll calc_remaining(const ll &M, vector<stamp> &s) {
+    ll remaining= 0;
     for (ll i = 0; i < M; i++) {
         remaining += s[i].size();
     }
+    return remaining;
+}
+
+void calc_prob_each(const ll &N, const vector<vector<ll>> &field, const vector<vector<double>> &init_prob, ll k,
+                    vector<stamp> &s, vector<vector<vector<double>>> &prob_each) {
+    ll cnt = 0;
+    for (ll si = 0; si + s[k].h <= N; si++) {
+        for (ll sj = 0; sj + s[k].w <= N; sj++) {
+            bool ok = true;
+            for (ll l = 0; l < s[k].size(); l++) {
+                ll i = s[k].ps[l].i;
+                ll j = s[k].ps[l].j;
+                if (field[si + i][sj + j] == 0) {
+                    ok = false;
+                }
+            }
+            if (ok) {
+                cnt++;
+                for (ll l = 0; l < s[k].size(); l++) {
+                    ll i = s[k].ps[l].i;
+                    ll j = s[k].ps[l].j;
+                    prob_each[k][si + i][sj + j] += 1;
+                }
+            }
+        }
+    }
+    for (ll i = 0; i < N; i++) {
+        for (ll j = 0; j < N; j++) {
+            prob_each[k][i][j] /= cnt;
+            prob_each[k][i][j] *= init_prob[i][j];
+        }
+    }
+}
+
+void calc_prob(const ll &N, const ll &M, const vector<vector<ll>> &field, const vector<vector<vector<double>>> &prob_each,
+          vector<vector<double>> &prob) {
+    for (ll i = 0; i < N; i++) {
+        for (ll j = 0; j < N; j++) {
+            double p = 1.0;
+            for (ll k = 0; k < M; k++) {
+                p *= 1 - prob_each[k][i][j];
+            }
+            prob[i][j] = (1 - p);
+            if (field[i][j] == 0) {
+                prob[i][j] = 0;
+            } else if (field[i][j] > 0) {
+                prob[i][j] = 1;
+            }
+        }
+    }
+}
+
+ll sense_high_ent_cell(const ll &N, const vector<vector<double>> &prob, vector<vector<ll>> &field) {
+    ll gi = -1, gj = -1;
+    for (ll i = 0; i < N; i++) {
+        for (ll j = 0; j < N; j++) {
+            if (field[i][j] < 0 && (gi < 0 || abs(prob[i][j] - 0.5) < abs(prob[gi][gj] - 0.5))) {
+                gi = i;
+                gj = j;
+            }
+        }
+    }
+    cout << "q 1 " << gi << " " << gj << endl;
+    flush(cout);
+    ll v;
+    cin >> v;
+    field[gi][gj] = v;
+
+    return v;
+}
+
+void prob_naive(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19937 &rnd) {
+    vector<vector<ll>> field(N, vector<ll>(N, -1));
+
+    vector<vector<double>> init_prob(N, vector<double>(N, 1.0));
+
+    calc_init_prob(N, init_prob);
+    ll remaining = calc_remaining(M, s);
 
     while (remaining > 0) {
         vector<vector<vector<double>>> prob_each(M, vector<vector<double>>(N, vector<double>(N, 0)));
 
         for (ll k = 0; k < M; k++) {
-            ll cnt = 0;
-            for (ll si = 0; si + s[k].h <= N; si++) {
-                for (ll sj = 0; sj + s[k].w <= N; sj++) {
-                    bool ok = true;
-                    for (ll l = 0; l < s[k].size(); l++) {
-                        ll i = s[k].ps[l].i;
-                        ll j = s[k].ps[l].j;
-                        if (field[si + i][sj + j] == 0) {
-                            ok = false;
-                        }
-                    }
-                    if (ok) {
-                        cnt++;
-                        for (ll l = 0; l < s[k].size(); l++) {
-                            ll i = s[k].ps[l].i;
-                            ll j = s[k].ps[l].j;
-                            prob_each[k][si + i][sj + j] += 1;
-                        }
-                    }
-                }
-            }
-            for (ll i = 0; i < N; i++) {
-                for (ll j = 0; j < N; j++) {
-                    prob_each[k][i][j] /= cnt;
-                    prob_each[k][i][j] *= init_prob[i][j];
-                }
-            }
+            calc_prob_each(N, field, init_prob, k, s, prob_each);
         }
 
         vector<vector<double>> prob(N, vector<double>(N, 0));
-        for (ll i = 0; i < N; i++) {
-            for (ll j = 0; j < N; j++) {
-                double p = 1.0;
-                for (ll k = 0; k < M; k++) {
-                    p *= 1 - prob_each[k][i][j];
-                }
-                prob[i][j] = (1 - p);
-                if (field[i][j] == 0) {
-                    prob[i][j] = 0;
-                } else if (field[i][j] > 0) {
-                    prob[i][j] = 1;
-                }
-            }
-        }
+        calc_prob(N, M, field, prob_each, prob);
 
         color_probability(N, prob);
 
@@ -230,21 +269,198 @@ void prob_naive2(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt
             }
         }
 
-        ll gi = -1, gj = -1;
-        for (ll i = 0; i < N; i++) {
-            for (ll j = 0; j < N; j++) {
-                if (field[i][j] < 0 && (gi < 0 || abs(prob[i][j] - 0.5) < abs(prob[gi][gj] - 0.5))) {
-                    gi = i;
-                    gj = j;
+        ll v = sense_high_ent_cell(N, prob, field);
+        remaining -= v;
+    }
+
+    vector<P> result;
+    for (ll i = 0; i < N; i++) {
+        for (ll j = 0; j < N; j++) {
+            if (field[i][j] > 0) {
+                result.emplace_back(i, j);
+            }
+        }
+    }
+
+    cout << "a " << result.size();
+    for (auto r: result) {
+        cout << " " << r.i << " " << r.j;
+    }
+}
+
+double calc_score(const ll &N, const ll &M, vector<stamp> &s, const vector<vector<ll>> &field, const vector<vector<double>> &prob, const vector<P> &solution) {
+    vector<vector<ll>> f2(N, vector<ll>(N, 0));
+    for (ll k = 0; k < M; k++) {
+        ll si = solution[k].i;
+        ll sj = solution[k].j;
+        for (ll l = 0; l < s[k].size(); l++) {
+            ll i = s[k].ps[l].i;
+            ll j = s[k].ps[l].j;
+            f2[si + i][sj + j] += 1;
+        }
+    }
+    double score = 0.0;
+    for (ll i = 0; i < N; i++) {
+        for (ll j = 0; j < N; j++) {
+            if (field[i][j] >= 0) {
+                score += abs(field[i][j] - f2[i][j]);
+            } else {
+//                score -= prob[i][j] * f2[i][j];
+            }
+        }
+    }
+    return score;
+}
+
+void print_solution(const ll &N, const ll &M, vector<stamp> &s, const vector<P> &solution) {
+    for (ll k = 0; k < M; k++) {
+        for (ll l = 0; l < s[k].size(); l++) {
+            ll i = s[k].ps[l].i;
+            ll j = s[k].ps[l].j;
+            cout << "#c " << solution[k].i + i << " " << solution[k].j + j << " yellow" << endl;
+        }
+    }
+}
+
+bool try_hc_solution(const ll &N, const ll &M, const double &e, vector<stamp> &s, vector<vector<ll>> &field, vector<vector<double>> &prob, mt19937 &rnd) {
+    vector<P> solution;
+
+    for (ll k = 0; k < M; k++) {
+        ll si = next_long(rnd, 0, N - s[k].h + 1);
+        ll sj = next_long(rnd, 0, N - s[k].w + 1);
+        solution.emplace_back(si, sj);
+    }
+
+    double currentScore = calc_score(N, M, s, field, prob, solution);
+    bool updated;
+    do {
+        updated = false;
+        // 1-opt
+        for (ll k = 0; k < M; k++) {
+            for (ll i = 0; i < N - s[k].h + 1; i++) {
+                for (ll j = 0; j < N - s[k].w + 1; j++) {
+                    vector<P> newSolution = solution;
+                    newSolution[k] = P(i, j);
+                    double newScore = calc_score(N, M, s, field, prob, newSolution);
+                    if (newScore < currentScore) {
+                        solution = newSolution;
+                        currentScore = newScore;
+                        updated = true;
+                    }
                 }
             }
         }
-        cout << "q 1 " << gi << " " << gj << endl;
-        flush(cout);
-        ll v;
-        cin >> v;
-        field[gi][gj] = v;
+        // 2-opt
+//        for (ll k = 0; k < M; k++) {
+//            for (ll l = k + 1; l < M; l++) {
+//                vector<P> newSolution = solution;
+//                for (ll i = 0; i < N - s[k].h + 1; i++) {
+//                    for (ll j = 0; j < N - s[k].w + 1; j++) {
+//                        for (ll ii = 0; ii < N - s[l].h + 1; ii++) {
+//                            for (ll jj = 0; jj < N - s[l].w + 1; jj++) {
+//                                newSolution[k] = P(i, j);
+//                                newSolution[l] = P(ii, jj);
+//                                double newScore = calc_score(N, M, s, field, prob, newSolution);
+//                                if (newScore < currentScore) {
+//                                    solution = newSolution;
+//                                    currentScore = newScore;
+//                                    updated = true;
+//                                }
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//        }
+    } while(updated);
 
+    print_solution(N, M, s, solution);
+
+    if (currentScore > EPS) {
+        return false;
+    }
+
+    vector<vector<ll>> f2(N, vector<ll>(N, 0));
+    for (ll k = 0; k < M; k++) {
+        ll si = solution[k].i;
+        ll sj = solution[k].j;
+        for (ll l = 0; l < s[k].size(); l++) {
+            ll i = s[k].ps[l].i;
+            ll j = s[k].ps[l].j;
+            f2[si + i][sj + j] += 1;
+        }
+    }
+    vector<P> result;
+    for (ll i = 0; i < N; i++) {
+        for (ll j = 0; j < N; j++) {
+            if (f2[i][j] > 0) {
+                result.emplace_back(i, j);
+            }
+        }
+    }
+    cout << "a " << result.size();
+    for (auto r: result) {
+        cout << " " << r.i << " " << r.j;
+    }
+    cout << endl;
+    flush(cout);
+    ll res;
+    cin >> res;
+
+    return res == 1;
+}
+
+void prob_hc(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19937 &rnd) {
+    vector<vector<ll>> field(N, vector<ll>(N, -1));
+
+    vector<vector<double>> init_prob(N, vector<double>(N, 1.0));
+
+    calc_init_prob(N, init_prob);
+    ll remaining = calc_remaining(M, s);
+
+    while (remaining > 0) {
+        vector<vector<vector<double>>> prob_each(M, vector<vector<double>>(N, vector<double>(N, 0)));
+
+        for (ll k = 0; k < M; k++) {
+            calc_prob_each(N, field, init_prob, k, s, prob_each);
+        }
+
+        vector<vector<double>> prob(N, vector<double>(N, 0));
+        calc_prob(N, M, field, prob_each, prob);
+
+        color_probability(N, prob);
+
+        double mx_ent = calc_ent(N, prob);
+        if (mx_ent < 0.01) {
+            bool ok = try_hc_solution(N, M, e, s, field, prob, rnd);
+            if (ok) {
+                return;
+            }
+        }
+
+        if (mx_ent < EPS) {
+            ll c = naive_matcher(N, M, e, s, field, prob);
+            for (ll i = 0; i < N; i++) {
+                for (ll j = 0; j < N; j++) {
+                    if (field[i][j] < 0) {
+                        prob[i][j] *= init_prob[i][j];
+                    }
+                }
+            }
+            double m = calc_ent(N, prob);
+            if (m < EPS) {
+                for (ll i = 0; i < N; i++) {
+                    for (ll j = 0; j < N; j++) {
+                        if (prob[i][j] > 0) {
+                            field[i][j] = 1;
+                        }
+                    }
+                }
+                break;
+            }
+        }
+
+        ll v = sense_high_ent_cell(N, prob, field);
         remaining -= v;
     }
 
@@ -324,7 +540,7 @@ int main() {
         s.push_back(st);
     }
 
-    prob_naive2(N, M, e, s, rnd);
+    prob_hc(N, M, e, s, rnd);
 
     return 0;
 }

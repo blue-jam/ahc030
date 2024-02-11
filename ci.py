@@ -10,7 +10,9 @@ os.system(compile_command)
 # Initialize sum of outputs
 total_sum = 0
 
-run_command = f'seq 0 999 | xargs printf "%04d\n" | xargs -I@ -P8 sh -c "CI=true gtimeout 3 tools/target/debug/tester ./a.out < tools/in/@.txt > out/@.txt"'
+num_cases = 500
+
+run_command = f'seq 0 {num_cases - 1} | xargs printf "%04d\n" | xargs -I@ -P6 sh -c "CI=true gtimeout 3 tools/target/debug/tester ./a.out < tools/in/@.txt > out/@.txt"'
 os.system(run_command)
 print("Outputs generated")
 
@@ -18,7 +20,7 @@ print("Outputs generated")
 # accumulate the sum of outputs based on N, M into 2-dimensional list scores
 scores = [[0 for i in range(21)] for j in range(21)]
 count = [[0 for i in range(21)] for j in range(21)]
-for i in range(0, 500):
+for i in range(0, num_cases):
     input_file = f"tools/in/{i:04d}.txt"
     output_file = f"out/{i:04d}.txt"
 

@@ -108,6 +108,16 @@ ll naive_matcher(
     return c;
 }
 
+void color_probability(const ll &N, const vector<vector<double>> &prob) {
+    for (ll i = 0; i < N; i++) {
+        for (ll j = 0; j < N; j++) {
+            double p = prob[i][j];
+            ll v = (ll) (abs(0.5 - p) * 100) + 155;
+            printf("#c %lld %lld #00%02llx%02llx\n", i, j, v, v);
+        }
+    }
+}
+
 void prob_naive2(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19937 &rnd) {
     vector<vector<ll>> field(N, vector<ll>(N, -1));
 
@@ -131,11 +141,6 @@ void prob_naive2(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt
             ll v;
             cin >> v;
             if (v == 0) {
-                for (ll i = 0; si + i < min(si + SN, N); i++) {
-                    for (ll j = 0; sj + j < min(sj + SN, N); j++) {
-                        printf("#c %lld %lld yellow\n", si + i, sj + j);
-                    }
-                }
                 for (ll i = 0; si + i < min(si + SN, N); i++) {
                     for (ll j = 0; sj + j < min(sj + SN, N); j++) {
                         init_prob[si + i][sj + j] = 0.01;
@@ -198,6 +203,8 @@ void prob_naive2(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt
                 }
             }
         }
+
+        color_probability(N, prob);
 
         double mx_ent = calc_ent(N, prob);
         if (mx_ent < EPS) {

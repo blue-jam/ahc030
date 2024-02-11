@@ -113,7 +113,8 @@ void color_probability(const ll &N, const vector<vector<double>> &prob) {
         for (ll j = 0; j < N; j++) {
             double p = prob[i][j];
             ll v = (ll) (abs(0.5 - p) * 100) + 155;
-            printf("#c %lld %lld #00%02llx%02llx\n", i, j, v, v);
+            // output color in #c i j #00GGBB
+            cout << "#c " << i << " " << j << " #00" << hex << v << v << dec << endl;
         }
     }
 }
@@ -300,6 +301,7 @@ void naive_solver(ll N, ll M, double e, vector<stamp> &s, mt19937 &rnd) {
 
 int main() {
     mt19937 rnd(123);
+    ios_base::sync_with_stdio(false);
 
     ll N, M;
     double e;

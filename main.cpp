@@ -310,7 +310,30 @@ double calc_score(const ll &N, const ll &M, vector<stamp> &s, const vector<vecto
     return score;
 }
 
-double update_score(const ll &N, const ll &M, vector<stamp> &s, const vector<vector<ll>> &field, const vector<vector<double>> &prob, const vector<P> &solution, const vector<P> &prev_solution, const vector<vector<ll>> &prev_f2, const double prev_score) {
+double calc_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vector<vector<ll>> &field, const vector<vector<double>> &prob, const vector<P> &solution) {
+    vector<vector<ll>> f2(N, vector<ll>(N, 0));
+    for (ll k = 0; k < M; k++) {
+        ll si = solution[k].i;
+        ll sj = solution[k].j;
+        for (ll l = 0; l < s[k].size(); l++) {
+            ll i = s[k].ps[l].i;
+            ll j = s[k].ps[l].j;
+            f2[si + i][sj + j] += 1;
+        }
+    }
+    double score = 0.0;
+    for (ll i = 0; i < N; i++) {
+        for (ll j = 0; j < N; j++) {
+            if (field[i][j] >= 0) {
+                score += abs(field[i][j] - f2[i][j]);
+                score -= prob[i][j] * f2[i][j];
+            }
+        }
+    }
+    return score;
+}
+
+double update_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vector<vector<ll>> &field, const vector<vector<double>> &prob, const vector<P> &solution, const vector<P> &prev_solution, const vector<vector<ll>> &prev_f2, const double prev_score) {
     map<pair<ll, ll>, ll> delta;
 
     for (ll k = 0; k < M; k++) {
@@ -340,8 +363,10 @@ double update_score(const ll &N, const ll &M, vector<stamp> &s, const vector<vec
         }
 
         score -= abs(field[i][j] - prev_f2[i][j]);
+        score += prob[i][j] * prev_f2[i][j];
         ll nv = prev_f2[i][j] + v;
         score += abs(field[i][j] - nv);
+        score -= prob[i][j] * nv;
     }
 
     return score;
@@ -386,7 +411,7 @@ bool try_hc_solution(const ll &N, const ll &M, const double &e, vector<stamp> &s
     vector<vector<ll>> f2(N, vector<ll>(N, 0));
     calc_field_status(N, M, s, solution, f2);
 
-    double currentScore = calc_score(N, M, s, field, prob, solution);
+    double currentScore = calc_prob_score(N, M, s, field, prob, solution);
     bool updated;
     do {
         updated = false;
@@ -396,7 +421,7 @@ bool try_hc_solution(const ll &N, const ll &M, const double &e, vector<stamp> &s
                 for (ll j = 0; j < N - s[k].w + 1; j++) {
                     vector<P> newSolution = solution;
                     newSolution[k] = P(i, j);
-                    double newScore = update_score(N, M, s, field, prob, newSolution, solution, f2, currentScore);
+                    double newScore = update_prob_score(N, M, s, field, prob, newSolution, solution, f2, currentScore);
                     if (newScore < currentScore) {
                         solution = newSolution;
                         currentScore = newScore;
@@ -417,7 +442,7 @@ bool try_hc_solution(const ll &N, const ll &M, const double &e, vector<stamp> &s
                     vector<P> newSolution = solution;
                     newSolution[k] = P(i, j);
                     newSolution[l] = P(ni, nj);
-                    double newScore = update_score(N, M, s, field, prob, newSolution, solution, f2, currentScore);
+                    double newScore = update_prob_score(N, M, s, field, prob, newSolution, solution, f2, currentScore);
                     if (newScore < currentScore) {
                         solution = newSolution;
                         currentScore = newScore;
@@ -431,6 +456,7 @@ bool try_hc_solution(const ll &N, const ll &M, const double &e, vector<stamp> &s
 
     print_solution(N, M, s, solution);
 
+    currentScore = calc_score(N, M, s, field, prob, solution);
     if (currentScore > EPS) {
         return false;
     }

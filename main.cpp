@@ -571,6 +571,7 @@ void cont_hc(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt1993
     ll remaining = calc_remaining(M, s);
     ll total = remaining;
 
+    ll updated_since = 1;
     while (remaining > 0) {
         vector<vector<vector<double>>> prob_each(M, vector<vector<double>>(N, vector<double>(N, 0)));
 
@@ -588,23 +589,34 @@ void cont_hc(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt1993
         do {
             updated = false;
             // 1-opt
-            for (ll k = 0; k < M; k++) {
-                for (ll i = 0; i < N - s[k].h + 1; i++) {
-                    for (ll j = 0; j < N - s[k].w + 1; j++) {
-                        vector<P> newSolution = solution;
-                        newSolution[k] = P(i, j);
-                        double newScore = update_prob_score(N, M, s, field, prob, newSolution, solution, f2, currentScore);
-                        if (newScore < currentScore) {
-                            solution = newSolution;
-                            currentScore = newScore;
-                            calc_field_status(N, M, s, solution, f2);
-                            updated = true;
-                        }
-                    }
+            for (ll cnt = 0; cnt < 1000; cnt++) {
+                ll k = next_long(rnd, 0, M);
+                ll i = next_long(rnd, 0, N - s[k].h + 1);
+                ll j = next_long(rnd, 0, N - s[k].w + 1);
+                vector<P> newSolution = solution;
+                newSolution[k] = P(i, j);
+                double newScore = update_prob_score(N, M, s, field, prob, newSolution, solution, f2, currentScore);
+                double diff = newScore - currentScore;
+                double t = 0.1 / updated_since;
+                double p;
+                if (diff < 0) {
+                    p = 1;
+                } else if (updated_since <= 1) {
+                    p = 0;
+                } else {
+                    p = exp(-diff / t);
+                }
+                if (next_long(rnd, 0, 100) < p * 100) {
+                    solution = newSolution;
+                    currentScore = newScore;
+                    calc_field_status(N, M, s, solution, f2);
+                    updated = true;
+
+                    updated_since = 1;
                 }
             }
             // 2-opt
-            for (ll cnt = 0; cnt < 1000; cnt++) {
+            for (ll cnt = 0; cnt < 100; cnt++) {
                 ll k = next_long(rnd, 0, M);
                 ll l = next_long(rnd, 0, M);
                 ll i = next_long(rnd, 0, N - s[k].h + 1);
@@ -615,11 +627,23 @@ void cont_hc(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt1993
                 newSolution[k] = P(i, j);
                 newSolution[l] = P(ni, nj);
                 double newScore = update_prob_score(N, M, s, field, prob, newSolution, solution, f2, currentScore);
-                if (newScore < currentScore) {
+                double diff = newScore - currentScore;
+                double t = 0.1 / updated_since;
+                double p;
+                if (diff < 0) {
+                    p = 1;
+                } else if (updated_since <= 1) {
+                    p = 0;
+                } else {
+                    p = exp(-diff / t);
+                }
+                if (next_long(rnd, 0, 100) < p * 100) {
                     solution = newSolution;
                     currentScore = newScore;
                     calc_field_status(N, M, s, solution, f2);
                     updated = true;
+
+                    updated_since = 1;
                 }
             }
         } while (updated);
@@ -679,6 +703,8 @@ void cont_hc(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt1993
 
         ll v = sense_high_ent_cell(N, prob, field);
         remaining -= v;
+
+        updated_since++;
     }
 
     vector<P> result;

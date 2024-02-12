@@ -66,6 +66,15 @@ ll dfs(
         return 1LL;
     }
 
+    const ll remaining = m - k;
+    for (ll i = 0; i < n; i++) {
+        for (ll j = 0; j < n; j++) {
+            if (field[i][j] >= 0 && f2[i][j] + remaining < field[i][j]) {
+                return 0;
+            }
+        }
+    }
+
     ll cnt = 0;
     for (ll si = 0; si + s[k].h <= n; si++) {
         for (ll sj = 0; sj + s[k].w <= n; sj++) {
@@ -338,7 +347,9 @@ double calc_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vector<
         for (ll j = 0; j < N; j++) {
             if (field[i][j] >= 0) {
                 score += calc_diff_score(field[i][j], f2[i][j]);
-                score -= prob[i][j] * f2[i][j];
+                score -= prob[i][j] * f2[i][j];     // I don't know why this is necessary
+            } else {
+                score -= (prob[i][j] - 0.5) * f2[i][j];
             }
         }
     }
@@ -370,15 +381,17 @@ double update_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vecto
         ll j = p.first.second;
         ll v = p.second;
 
-        if (field[i][j] < 0) {
-            continue;
-        }
-
-        score -= calc_diff_score(field[i][j], prev_f2[i][j]);
-        score += prob[i][j] * prev_f2[i][j];
         ll nv = prev_f2[i][j] + v;
-        score += calc_diff_score(field[i][j], nv);
-        score -= prob[i][j] * nv;
+        if (field[i][j] >= 0) {
+            score -= calc_diff_score(field[i][j], prev_f2[i][j]);
+            score += prob[i][j] * prev_f2[i][j];
+
+            score += calc_diff_score(field[i][j], nv);
+            score -= prob[i][j] * nv;
+        } else {
+            score += (prob[i][j] - 0.5) * prev_f2[i][j];
+            score -= (prob[i][j] - 0.5) * nv;
+        }
     }
 
     return score;

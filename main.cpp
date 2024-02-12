@@ -553,6 +553,149 @@ void prob_hc(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt1993
     }
 }
 
+void cont_hc(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19937 &rnd) {
+    vector<vector<ll>> field(N, vector<ll>(N, -1));
+
+    vector<P> solution;
+    vector<vector<ll>> f2(N, vector<ll>(N, 0));
+    for (ll k = 0; k < M; k++) {
+        ll si = next_long(rnd, 0, N - s[k].h + 1);
+        ll sj = next_long(rnd, 0, N - s[k].w + 1);
+        solution.emplace_back(si, sj);
+    }
+    calc_field_status(N, M, s, solution, f2);
+
+    vector<vector<double>> init_prob(N, vector<double>(N, 1.0));
+
+    calc_init_prob(N, init_prob);
+    ll remaining = calc_remaining(M, s);
+    ll total = remaining;
+
+    while (remaining > 0) {
+        vector<vector<vector<double>>> prob_each(M, vector<vector<double>>(N, vector<double>(N, 0)));
+
+        for (ll k = 0; k < M; k++) {
+            calc_prob_each(N, field, init_prob, k, s, prob_each);
+        }
+
+        vector<vector<double>> prob(N, vector<double>(N, 0));
+        calc_prob(N, M, field, prob_each, prob);
+        color_probability(N, prob);
+
+        double currentScore = calc_prob_score(N, M, s, field, prob, solution);
+
+        bool updated;
+        do {
+            updated = false;
+            // 1-opt
+            for (ll k = 0; k < M; k++) {
+                for (ll i = 0; i < N - s[k].h + 1; i++) {
+                    for (ll j = 0; j < N - s[k].w + 1; j++) {
+                        vector<P> newSolution = solution;
+                        newSolution[k] = P(i, j);
+                        double newScore = update_prob_score(N, M, s, field, prob, newSolution, solution, f2, currentScore);
+                        if (newScore < currentScore) {
+                            solution = newSolution;
+                            currentScore = newScore;
+                            calc_field_status(N, M, s, solution, f2);
+                            updated = true;
+                        }
+                    }
+                }
+            }
+            // 2-opt
+            for (ll cnt = 0; cnt < 1000; cnt++) {
+                ll k = next_long(rnd, 0, M);
+                ll l = next_long(rnd, 0, M);
+                ll i = next_long(rnd, 0, N - s[k].h + 1);
+                ll j = next_long(rnd, 0, N - s[k].w + 1);
+                ll ni = next_long(rnd, 0, N - s[l].h + 1);
+                ll nj = next_long(rnd, 0, N - s[l].w + 1);
+                vector<P> newSolution = solution;
+                newSolution[k] = P(i, j);
+                newSolution[l] = P(ni, nj);
+                double newScore = update_prob_score(N, M, s, field, prob, newSolution, solution, f2, currentScore);
+                if (newScore < currentScore) {
+                    solution = newSolution;
+                    currentScore = newScore;
+                    calc_field_status(N, M, s, solution, f2);
+                    updated = true;
+                }
+            }
+        } while (updated);
+
+        print_solution(N, M, s, solution);
+
+        double mx_ent = calc_ent(N, prob);
+        double ratio = (double) remaining / total;
+
+        if (mx_ent < 0.01 || ratio < 0.3) {
+            double score = calc_score(N, M, s, field, prob, solution);
+            if (score < EPS) {
+                calc_field_status(N, M, s, solution, f2);
+                vector<P> result;
+                for (ll i = 0; i < N; i++) {
+                    for (ll j = 0; j < N; j++) {
+                        if (f2[i][j] > 0) {
+                            result.emplace_back(i, j);
+                        }
+                    }
+                }
+                cout << "a " << result.size();
+                for (auto r: result) {
+                    cout << " " << r.i << " " << r.j;
+                }
+                cout << endl;
+                flush(cout);
+                ll res;
+                cin >> res;
+                if (res == 1) {
+                    return;
+                }
+            }
+        }
+
+        if (mx_ent < EPS) {
+            ll c = naive_matcher(N, M, e, s, field, prob);
+            for (ll i = 0; i < N; i++) {
+                for (ll j = 0; j < N; j++) {
+                    if (field[i][j] < 0) {
+                        prob[i][j] *= init_prob[i][j];
+                    }
+                }
+            }
+            double m = calc_ent(N, prob);
+            if (m < EPS) {
+                for (ll i = 0; i < N; i++) {
+                    for (ll j = 0; j < N; j++) {
+                        if (prob[i][j] > 0) {
+                            field[i][j] = 1;
+                        }
+                    }
+                }
+                break;
+            }
+        }
+
+        ll v = sense_high_ent_cell(N, prob, field);
+        remaining -= v;
+    }
+
+    vector<P> result;
+    for (ll i = 0; i < N; i++) {
+        for (ll j = 0; j < N; j++) {
+            if (field[i][j] > 0) {
+                result.emplace_back(i, j);
+            }
+        }
+    }
+
+    cout << "a " << result.size();
+    for (auto r: result) {
+        cout << " " << r.i << " " << r.j;
+    }
+}
+
 void naive_solver(ll N, ll M, double e, vector<stamp> &s, mt19937 &rnd) {
     ll sum = 0;
     for (ll i = 0; i < M; i++) {
@@ -614,7 +757,8 @@ int main() {
         s.push_back(st);
     }
 
-    prob_hc(N, M, e, s, rnd);
+//    prob_hc(N, M, e, s, rnd);
+    cont_hc(N, M, e, s, rnd);
 
     return 0;
 }

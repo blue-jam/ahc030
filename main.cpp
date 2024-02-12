@@ -846,7 +846,7 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
         double mx_ent = calc_ent(N, prob);
         double ratio = (double) remaining / total;
 
-        if (mx_ent < 0.01 || ratio < 0.4) {
+        if (mx_ent < 0.05 || ratio < 0.4) {
             double score = calc_score(N, M, s, field, prob, current_best_solution);
             if (score < EPS) {
                 vector<vector<ll>> f2(N, vector<ll>(N, 0));

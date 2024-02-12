@@ -505,7 +505,7 @@ void prob_hc(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt1993
 
         double mx_ent = calc_ent(N, prob);
         double ratio = (double) remaining / total;
-        if (mx_ent < 0.01 || ratio < 0.05) {
+        if (mx_ent < 0.01) {
             bool ok = try_hc_solution(N, M, e, s, field, prob, rnd);
             if (ok) {
                 return;

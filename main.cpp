@@ -14,6 +14,10 @@ ll next_long(mt19937 &rnd, ll l, ll u) {
 struct P {
     ll i, j;
     P(ll i, ll j) : i(i), j(j) {}
+
+    bool operator<(const P &p) const {
+        return i < p.i || (i == p.i && j < p.j);
+    }
 };
 
 struct stamp {
@@ -722,6 +726,190 @@ void cont_hc(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt1993
     }
 }
 
+const ll MAX_BEAM = 10;
+const ll MAX_DEPTH = 2;
+
+void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19937 &rnd) {
+    vector<vector<ll>> field(N, vector<ll>(N, -1));
+
+    vector<vector<double>> init_prob(N, vector<double>(N, 1.0));
+
+    calc_init_prob(N, init_prob);
+    ll remaining = calc_remaining(M, s);
+    ll total = remaining;
+
+    map<vector<P>, double> solutions;
+    priority_queue<pair<double, vector<P>>> Q;
+    for (ll l = 0; l < MAX_BEAM; l++) {
+        vector<P> solution;
+        for (ll k = 0; k < M; k++) {
+            ll si = next_long(rnd, 0, N - s[k].h + 1);
+            ll sj = next_long(rnd, 0, N - s[k].w + 1);
+            solution.emplace_back(si, sj);
+        }
+        double score = calc_prob_score(N, M, s, field, init_prob, solution);
+        solutions[solution] = score;
+        Q.push(make_pair(score, solution));
+    }
+
+    while (remaining > 0) {
+        vector<vector<vector<double>>> prob_each(M, vector<vector<double>>(N, vector<double>(N, 0)));
+
+        for (ll k = 0; k < M; k++) {
+            calc_prob_each(N, field, init_prob, k, s, prob_each);
+        }
+
+        vector<vector<double>> prob(N, vector<double>(N, 0));
+        calc_prob(N, M, field, prob_each, prob);
+        color_probability(N, prob);
+
+        double current_best_score = calc_prob_score(N, M, s, field, prob, Q.top().second);
+        vector<P> current_best_solution = Q.top().second;
+        for (ll d = 0; d < MAX_DEPTH; d++) {
+            map<vector<P>, double> next_best_solutions;
+            priority_queue<pair<double, vector<P>>> nextQ;
+            while (!Q.empty()) {
+                auto p = Q.top();
+                Q.pop();
+                vector<P> solution = p.second;
+                solutions.erase(solution);
+                // 1-opt
+                for (ll cnt = 0; cnt < 100; cnt++) {
+                    ll k = next_long(rnd, 0, M);
+                    ll i = next_long(rnd, 0, N - s[k].h + 1);
+                    ll j = next_long(rnd, 0, N - s[k].w + 1);
+                    vector<P> newSolution = solution;
+                    newSolution[k] = P(i, j);
+                    double score = calc_prob_score(N, M, s, field, prob, newSolution);
+
+                    if (next_best_solutions.find(newSolution) != next_best_solutions.end()) {
+                        continue;
+                    }
+
+                    if (next_best_solutions.size() > MAX_BEAM) {
+                        auto p = nextQ.top();
+                        nextQ.pop();
+                        next_best_solutions.erase(p.second);
+                    }
+
+                    next_best_solutions[newSolution] = score;
+                    nextQ.push(make_pair(score, newSolution));
+
+                    if (score < current_best_score) {
+                        current_best_score = score;
+                        current_best_solution = newSolution;
+                    }
+                }
+
+                // 2-opt
+                for (ll cnt = 0; cnt < 20; cnt++) {
+                    ll k = next_long(rnd, 0, M);
+                    ll l = next_long(rnd, 0, M);
+                    ll i = next_long(rnd, 0, N - s[k].h + 1);
+                    ll j = next_long(rnd, 0, N - s[k].w + 1);
+                    ll ni = next_long(rnd, 0, N - s[l].h + 1);
+                    ll nj = next_long(rnd, 0, N - s[l].w + 1);
+                    vector<P> newSolution = solution;
+                    newSolution[k] = P(i, j);
+                    newSolution[l] = P(ni, nj);
+                    double score = calc_prob_score(N, M, s, field, prob, newSolution);
+
+                    if (next_best_solutions.find(newSolution) != next_best_solutions.end()) {
+                        continue;
+                    }
+
+                    if (next_best_solutions.size() > MAX_BEAM) {
+                        auto p = nextQ.top();
+                        nextQ.pop();
+                        next_best_solutions.erase(p.second);
+                    }
+
+                    next_best_solutions[newSolution] = score;
+                    nextQ.push(make_pair(score, newSolution));
+
+                    if (score < current_best_score) {
+                        current_best_score = score;
+                        current_best_solution = newSolution;
+                    }
+                }
+            }
+            Q = nextQ;
+            solutions = next_best_solutions;
+        }
+
+        print_solution(N, M, s, current_best_solution);
+
+        double mx_ent = calc_ent(N, prob);
+        double ratio = (double) remaining / total;
+
+        if (mx_ent < 0.01 || ratio < 0.4) {
+            double score = calc_score(N, M, s, field, prob, current_best_solution);
+            if (score < EPS) {
+                vector<vector<ll>> f2(N, vector<ll>(N, 0));
+                calc_field_status(N, M, s, current_best_solution, f2);
+                vector<P> result;
+                for (ll i = 0; i < N; i++) {
+                    for (ll j = 0; j < N; j++) {
+                        if (f2[i][j] > 0) {
+                            result.emplace_back(i, j);
+                        }
+                    }
+                }
+                cout << "a " << result.size();
+                for (auto r: result) {
+                    cout << " " << r.i << " " << r.j;
+                }
+                cout << endl;
+                flush(cout);
+                ll res;
+                cin >> res;
+                if (res == 1) {
+                    return;
+                }
+            }
+        }
+
+        if (mx_ent < EPS) {
+            ll c = naive_matcher(N, M, e, s, field, prob);
+            for (ll i = 0; i < N; i++) {
+                for (ll j = 0; j < N; j++) {
+                    if (field[i][j] < 0) {
+                        prob[i][j] *= init_prob[i][j];
+                    }
+                }
+            }
+            double m = calc_ent(N, prob);
+            if (m < EPS) {
+                for (ll i = 0; i < N; i++) {
+                    for (ll j = 0; j < N; j++) {
+                        if (prob[i][j] > 0) {
+                            field[i][j] = 1;
+                        }
+                    }
+                }
+                break;
+            }
+        }
+
+        ll v = sense_high_ent_cell(N, prob, field);
+        remaining -= v;
+    }
+
+    vector<P> result;
+    for (ll i = 0; i < N; i++) {
+        for (ll j = 0; j < N; j++) {
+            if (field[i][j] > 0) {
+                result.emplace_back(i, j);
+            }
+        }
+    }
+
+    cout << "a " << result.size();
+    for (auto r: result) {
+        cout << " " << r.i << " " << r.j;
+    }
+}
+
 void naive_solver(ll N, ll M, double e, vector<stamp> &s, mt19937 &rnd) {
     ll sum = 0;
     for (ll i = 0; i < M; i++) {
@@ -783,8 +971,7 @@ int main() {
         s.push_back(st);
     }
 
-//    prob_hc(N, M, e, s, rnd);
-    cont_hc(N, M, e, s, rnd);
+    cont_beam(N, M, e, s, rnd);
 
     return 0;
 }

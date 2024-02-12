@@ -22,7 +22,7 @@ struct stamp {
 
     stamp(ll h, ll w, const vector<P> &ps) : h(h), w(w), ps(ps) {}
 
-    ll size() {
+    ll size() const {
         return ps.size();
     }
 };
@@ -304,11 +304,46 @@ double calc_score(const ll &N, const ll &M, vector<stamp> &s, const vector<vecto
         for (ll j = 0; j < N; j++) {
             if (field[i][j] >= 0) {
                 score += abs(field[i][j] - f2[i][j]);
-            } else {
-//                score -= prob[i][j] * f2[i][j];
             }
         }
     }
+    return score;
+}
+
+double update_score(const ll &N, const ll &M, vector<stamp> &s, const vector<vector<ll>> &field, const vector<vector<double>> &prob, const vector<P> &solution, const vector<P> &prev_solution, const vector<vector<ll>> &prev_f2, const double prev_score) {
+    map<pair<ll, ll>, ll> delta;
+
+    for (ll k = 0; k < M; k++) {
+        if (solution[k].i != prev_solution[k].i || solution[k].j != prev_solution[k].j) {
+            ll pi = prev_solution[k].i;
+            ll pj = prev_solution[k].j;
+            ll ni = solution[k].i;
+            ll nj = solution[k].j;
+            for (ll l = 0; l < s[k].size(); l++) {
+                ll i = s[k].ps[l].i;
+                ll j = s[k].ps[l].j;
+                delta[make_pair(pi + i, pj + j)] -= 1;
+                delta[make_pair(ni + i, nj + j)] += 1;
+            }
+        }
+    }
+
+    double score = prev_score;
+
+    for (auto p: delta) {
+        ll i = p.first.first;
+        ll j = p.first.second;
+        ll v = p.second;
+
+        if (field[i][j] < 0) {
+            continue;
+        }
+
+        score -= abs(field[i][j] - prev_f2[i][j]);
+        ll nv = prev_f2[i][j] + v;
+        score += abs(field[i][j] - nv);
+    }
+
     return score;
 }
 
@@ -322,6 +357,23 @@ void print_solution(const ll &N, const ll &M, vector<stamp> &s, const vector<P> 
     }
 }
 
+void calc_field_status(const ll &N, const ll &M, const vector<stamp> &s, const vector<P> &solution, vector<vector<ll>> &f) {
+    for (ll i = 0; i < N; i++) {
+        for (ll j = 0; j < N; j++) {
+            f[i][j] = 0;
+        }
+    }
+    for (ll k = 0; k < M; k++) {
+        ll si = solution[k].i;
+        ll sj = solution[k].j;
+        for (ll l = 0; l < s[k].size(); l++) {
+            ll i = s[k].ps[l].i;
+            ll j = s[k].ps[l].j;
+            f[si + i][sj + j] += 1;
+        }
+    }
+}
+
 bool try_hc_solution(const ll &N, const ll &M, const double &e, vector<stamp> &s, vector<vector<ll>> &field, vector<vector<double>> &prob, mt19937 &rnd) {
     vector<P> solution;
 
@@ -330,6 +382,9 @@ bool try_hc_solution(const ll &N, const ll &M, const double &e, vector<stamp> &s
         ll sj = next_long(rnd, 0, N - s[k].w + 1);
         solution.emplace_back(si, sj);
     }
+
+    vector<vector<ll>> f2(N, vector<ll>(N, 0));
+    calc_field_status(N, M, s, solution, f2);
 
     double currentScore = calc_score(N, M, s, field, prob, solution);
     bool updated;
@@ -341,37 +396,37 @@ bool try_hc_solution(const ll &N, const ll &M, const double &e, vector<stamp> &s
                 for (ll j = 0; j < N - s[k].w + 1; j++) {
                     vector<P> newSolution = solution;
                     newSolution[k] = P(i, j);
-                    double newScore = calc_score(N, M, s, field, prob, newSolution);
+                    double newScore = update_score(N, M, s, field, prob, newSolution, solution, f2, currentScore);
                     if (newScore < currentScore) {
                         solution = newSolution;
                         currentScore = newScore;
+                        calc_field_status(N, M, s, solution, f2);
                         updated = true;
                     }
                 }
             }
         }
         // 2-opt
-//        for (ll k = 0; k < M; k++) {
-//            for (ll l = k + 1; l < M; l++) {
-//                vector<P> newSolution = solution;
-//                for (ll i = 0; i < N - s[k].h + 1; i++) {
-//                    for (ll j = 0; j < N - s[k].w + 1; j++) {
-//                        for (ll ii = 0; ii < N - s[l].h + 1; ii++) {
-//                            for (ll jj = 0; jj < N - s[l].w + 1; jj++) {
-//                                newSolution[k] = P(i, j);
-//                                newSolution[l] = P(ii, jj);
-//                                double newScore = calc_score(N, M, s, field, prob, newSolution);
-//                                if (newScore < currentScore) {
-//                                    solution = newSolution;
-//                                    currentScore = newScore;
-//                                    updated = true;
-//                                }
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-//        }
+        for (ll k = 0; k < M; k++) {
+            for (ll l = k + 1; l < M; l++) {
+                for (ll t = 0; t < 50; t++) {
+                    ll i = next_long(rnd, 0, N - s[k].h + 1);
+                    ll j = next_long(rnd, 0, N - s[k].w + 1);
+                    ll ni = next_long(rnd, 0, N - s[l].h + 1);
+                    ll nj = next_long(rnd, 0, N - s[l].w + 1);
+                    vector<P> newSolution = solution;
+                    newSolution[k] = P(i, j);
+                    newSolution[l] = P(ni, nj);
+                    double newScore = update_score(N, M, s, field, prob, newSolution, solution, f2, currentScore);
+                    if (newScore < currentScore) {
+                        solution = newSolution;
+                        currentScore = newScore;
+                        calc_field_status(N, M, s, solution, f2);
+                        updated = true;
+                    }
+                }
+            }
+        }
     } while(updated);
 
     print_solution(N, M, s, solution);
@@ -380,16 +435,7 @@ bool try_hc_solution(const ll &N, const ll &M, const double &e, vector<stamp> &s
         return false;
     }
 
-    vector<vector<ll>> f2(N, vector<ll>(N, 0));
-    for (ll k = 0; k < M; k++) {
-        ll si = solution[k].i;
-        ll sj = solution[k].j;
-        for (ll l = 0; l < s[k].size(); l++) {
-            ll i = s[k].ps[l].i;
-            ll j = s[k].ps[l].j;
-            f2[si + i][sj + j] += 1;
-        }
-    }
+    calc_field_status(N, M, s, solution, f2);
     vector<P> result;
     for (ll i = 0; i < N; i++) {
         for (ll j = 0; j < N; j++) {

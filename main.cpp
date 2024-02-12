@@ -126,8 +126,12 @@ void color_probability(const ll &N, const vector<vector<double>> &prob) {
         for (ll j = 0; j < N; j++) {
             double p = prob[i][j];
             ll v = (ll) (abs(0.5 - p) * 100) + 155;
-            // output color in #c i j #00GGBB
-            cout << "#c " << i << " " << j << " #00" << hex << v << v << dec << endl;
+            if (p < 0.5) {
+                // output color in #c i j #00GGBB
+                cout << "#c " << i << " " << j << " #00" << hex << v << v << dec << endl;
+            } else {
+                cout << "#c " << i << " " << j << " #" << hex << v << "00" << v << dec << endl;
+            }
         }
     }
 }
@@ -331,6 +335,17 @@ double calc_diff_score(const double expect, const double actual) {
     }
 }
 
+double calc_cell_score(const ll e, const double v, const double p) {
+    double result = 0.0;
+    if (e >= 0) {
+        result += calc_diff_score(e, v);
+        result -= v * p;
+    } else {
+        result -= (p - 0.5) * v;
+    }
+    return result;
+}
+
 double calc_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vector<vector<ll>> &field, const vector<vector<double>> &prob, const vector<P> &solution) {
     vector<vector<ll>> f2(N, vector<ll>(N, 0));
     for (ll k = 0; k < M; k++) {
@@ -345,12 +360,7 @@ double calc_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vector<
     double score = 0.0;
     for (ll i = 0; i < N; i++) {
         for (ll j = 0; j < N; j++) {
-            if (field[i][j] >= 0) {
-                score += calc_diff_score(field[i][j], f2[i][j]);
-                score -= prob[i][j] * f2[i][j];     // I don't know why this is necessary
-            } else {
-                score -= (prob[i][j] - 0.5) * f2[i][j];
-            }
+            score += calc_cell_score(field[i][j], f2[i][j], prob[i][j]);
         }
     }
     return score;
@@ -382,16 +392,8 @@ double update_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vecto
         ll v = p.second;
 
         ll nv = prev_f2[i][j] + v;
-        if (field[i][j] >= 0) {
-            score -= calc_diff_score(field[i][j], prev_f2[i][j]);
-            score += prob[i][j] * prev_f2[i][j];
-
-            score += calc_diff_score(field[i][j], nv);
-            score -= prob[i][j] * nv;
-        } else {
-            score += (prob[i][j] - 0.5) * prev_f2[i][j];
-            score -= (prob[i][j] - 0.5) * nv;
-        }
+        score -= calc_cell_score(field[i][j], prev_f2[i][j], prob[i][j]);
+        score += calc_cell_score(field[i][j], nv, prob[i][j]);
     }
 
     return score;

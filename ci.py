@@ -12,7 +12,7 @@ total_sum = 0
 
 num_cases = 500
 
-run_command = f'seq 0 {num_cases - 1} | xargs printf "%04d\n" | xargs -I@ -P6 sh -c "CI=true gtimeout 3 tools/target/debug/tester ./a.out < tools/in/@.txt > out/@.txt"'
+run_command = f'seq 0 {num_cases - 1} | xargs printf "%04d\n" | xargs -I@ -P3 sh -c "CI=true gtimeout 3 tools/target/debug/tester ./a.out < tools/in/@.txt > out/@.txt"'
 os.system(run_command)
 print("Outputs generated")
 

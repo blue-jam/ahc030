@@ -725,8 +725,8 @@ void cont_hc(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt1993
     }
 }
 
-const ll MAX_BEAM = 10;
-const ll MAX_DEPTH = 2;
+const ll MAX_BEAM = 20;
+const ll MAX_DEPTH = 1;
 
 void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19937 &rnd) {
     vector<vector<ll>> field(N, vector<ll>(N, -1));
@@ -764,6 +764,7 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
 
         double current_best_score = calc_prob_score(N, M, s, field, prob, Q.top().second);
         vector<P> current_best_solution = Q.top().second;
+        vector<vector<ll>> f2(N, vector<ll>(N, 0));
         for (ll d = 0; d < MAX_DEPTH; d++) {
             map<vector<P>, double> next_best_solutions;
             priority_queue<pair<double, vector<P>>> nextQ;
@@ -772,6 +773,10 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
                 Q.pop();
                 vector<P> solution = p.second;
                 solutions.erase(solution);
+
+                calc_field_status(N, M, s, solution, f2);
+                double current_score = calc_prob_score(N, M, s, field, prob, solution);
+
                 // 1-opt
                 for (ll cnt = 0; cnt < 100; cnt++) {
                     ll k = next_long(rnd, 0, M);
@@ -779,7 +784,7 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
                     ll j = next_long(rnd, 0, N - s[k].w + 1);
                     vector<P> newSolution = solution;
                     newSolution[k] = P(i, j);
-                    double score = calc_prob_score(N, M, s, field, prob, newSolution);
+                    double score = update_prob_score(N, M, s, field, prob, newSolution, solution, f2, current_score);
 
                     if (next_best_solutions.find(newSolution) != next_best_solutions.end()) {
                         continue;
@@ -811,7 +816,7 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
                     vector<P> newSolution = solution;
                     newSolution[k] = P(i, j);
                     newSolution[l] = P(ni, nj);
-                    double score = calc_prob_score(N, M, s, field, prob, newSolution);
+                    double score = update_prob_score(N, M, s, field, prob, newSolution, solution, f2, current_score);
 
                     if (next_best_solutions.find(newSolution) != next_best_solutions.end()) {
                         continue;

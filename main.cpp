@@ -463,6 +463,7 @@ void prob_hc(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt1993
 
     calc_init_prob(N, init_prob);
     ll remaining = calc_remaining(M, s);
+    ll total = remaining;
 
     while (remaining > 0) {
         vector<vector<vector<double>>> prob_each(M, vector<vector<double>>(N, vector<double>(N, 0)));
@@ -477,7 +478,8 @@ void prob_hc(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt1993
         color_probability(N, prob);
 
         double mx_ent = calc_ent(N, prob);
-        if (mx_ent < 0.01) {
+        double ratio = (double) remaining / total;
+        if (mx_ent < 0.01 || ratio < 0.05) {
             bool ok = try_hc_solution(N, M, e, s, field, prob, rnd);
             if (ok) {
                 return;

@@ -313,6 +313,15 @@ double calc_score(const ll &N, const ll &M, vector<stamp> &s, const vector<vecto
     return score;
 }
 
+double calc_diff_score(const double expect, const double actual) {
+    const double diff = expect - actual;
+    if (diff < 0) {
+        return -diff;
+    } else {
+        return diff / 2.0;
+    }
+}
+
 double calc_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vector<vector<ll>> &field, const vector<vector<double>> &prob, const vector<P> &solution) {
     vector<vector<ll>> f2(N, vector<ll>(N, 0));
     for (ll k = 0; k < M; k++) {
@@ -328,7 +337,7 @@ double calc_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vector<
     for (ll i = 0; i < N; i++) {
         for (ll j = 0; j < N; j++) {
             if (field[i][j] >= 0) {
-                score += abs(field[i][j] - f2[i][j]);
+                score += calc_diff_score(field[i][j], f2[i][j]);
                 score -= prob[i][j] * f2[i][j];
             }
         }
@@ -365,10 +374,10 @@ double update_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vecto
             continue;
         }
 
-        score -= abs(field[i][j] - prev_f2[i][j]);
+        score -= calc_diff_score(field[i][j], prev_f2[i][j]);
         score += prob[i][j] * prev_f2[i][j];
         ll nv = prev_f2[i][j] + v;
-        score += abs(field[i][j] - nv);
+        score += calc_diff_score(field[i][j], nv);
         score -= prob[i][j] * nv;
     }
 
@@ -730,6 +739,7 @@ const ll MAX_DEPTH = 1;
 
 void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19937 &rnd) {
     vector<vector<ll>> field(N, vector<ll>(N, -1));
+    vector<vector<ll>> f2(N, vector<ll>(N, 0));
 
     vector<vector<double>> init_prob(N, vector<double>(N, 1.0));
 
@@ -764,7 +774,6 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
 
         double current_best_score = calc_prob_score(N, M, s, field, prob, Q.top().second);
         vector<P> current_best_solution = Q.top().second;
-        vector<vector<ll>> f2(N, vector<ll>(N, 0));
         for (ll d = 0; d < MAX_DEPTH; d++) {
             map<vector<P>, double> next_best_solutions;
             priority_queue<pair<double, vector<P>>> nextQ;
@@ -849,7 +858,6 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
         if (mx_ent < 0.05 || ratio < 0.4) {
             double score = calc_score(N, M, s, field, prob, current_best_solution);
             if (score < EPS) {
-                vector<vector<ll>> f2(N, vector<ll>(N, 0));
                 calc_field_status(N, M, s, current_best_solution, f2);
                 vector<P> result;
                 for (ll i = 0; i < N; i++) {

@@ -143,11 +143,10 @@ void calc_init_prob(const ll &N, vector<vector<double>> &init_prob) {
             flush(cout);
             ll v;
             cin >> v;
-            if (v == 0) {
-                for (ll i = 0; si + i < min(si + SN, N); i++) {
-                    for (ll j = 0; sj + j < min(sj + SN, N); j++) {
-                        init_prob[si + i][sj + j] = PP;
-                    }
+            double a = min(SN, N - si) * min(SN, N - sj);
+            for (ll i = 0; si + i < min(si + SN, N); i++) {
+                for (ll j = 0; sj + j < min(sj + SN, N); j++) {
+                    init_prob[si + i][sj + j] = min((double)v / a + PP, 0.99);
                 }
             }
         }

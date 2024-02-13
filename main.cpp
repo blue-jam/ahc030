@@ -12,8 +12,8 @@ ll next_long(mt19937 &rnd, ll l, ll u) {
 }
 
 struct P {
-    ll i, j;
-    P(ll i, ll j) : i(i), j(j) {}
+    short i, j;
+    P(short i, short j) : i(i), j(j) {}
 
     bool operator<(const P &p) const {
         return i < p.i || (i == p.i && j < p.j);
@@ -21,10 +21,10 @@ struct P {
 };
 
 struct stamp {
-    ll h, w;
+    short h, w;
     vector<P> ps;
 
-    stamp(ll h, ll w, const vector<P> &ps) : h(h), w(w), ps(ps) {}
+    stamp(short h, short w, const vector<P> &ps) : h(h), w(w), ps(ps) {}
 
     ll size() const {
         return ps.size();
@@ -44,10 +44,10 @@ double calc_ent(const ll &N, const vector<vector<double>> &prob) {
 ll dfs(
         const ll &n, const ll &m, const double &e,
         vector<stamp> &s,
-        vector<vector<ll>> &field,
+        vector<vector<short>> &field,
         vector<vector<double>> &prob,
         ll k,
-        vector<vector<ll>> &f2) {
+        vector<vector<short>> &f2) {
     if (k == m) {
         for (ll i = 0; i < n; i++) {
             for (ll j = 0; j < n; j++) {
@@ -104,14 +104,14 @@ ll dfs(
 ll naive_matcher(
         const ll &n, const ll &m, const double &e,
         vector<stamp> &s,
-        vector<vector<ll>> &field,
+        vector<vector<short>> &field,
         vector<vector<double>> &prob) {
     for (ll i = 0; i < n; i++) {
         for (ll j = 0; j < n; j++) {
             prob[i][j] = 0;
         }
     }
-    vector<vector<ll>> f2(n, vector<ll>(n, 0));
+    vector<vector<short>> f2(n, vector<short>(n, 0));
     ll c = dfs(n, m, e, s, field, prob, 0, f2);
     for (ll i = 0; i < n; i++) {
         for (ll j = 0; j < n; j++) {
@@ -174,7 +174,7 @@ ll calc_remaining(const ll &M, vector<stamp> &s) {
     return remaining;
 }
 
-void calc_prob_each(const ll &N, const vector<vector<ll>> &field, const vector<vector<double>> &init_prob, ll k,
+void calc_prob_each(const ll &N, const vector<vector<short>> &field, const vector<vector<double>> &init_prob, ll k,
                     vector<stamp> &s, vector<vector<vector<double>>> &prob_each) {
     ll cnt = 0;
     for (ll si = 0; si + s[k].h <= N; si++) {
@@ -205,7 +205,7 @@ void calc_prob_each(const ll &N, const vector<vector<ll>> &field, const vector<v
     }
 }
 
-void calc_prob(const ll &N, const ll &M, const vector<vector<ll>> &field, const vector<vector<vector<double>>> &prob_each,
+void calc_prob(const ll &N, const ll &M, const vector<vector<short>> &field, const vector<vector<vector<double>>> &prob_each,
           vector<vector<double>> &prob) {
     for (ll i = 0; i < N; i++) {
         for (ll j = 0; j < N; j++) {
@@ -223,7 +223,7 @@ void calc_prob(const ll &N, const ll &M, const vector<vector<ll>> &field, const 
     }
 }
 
-ll sense_high_ent_cell(const ll &N, const vector<vector<double>> &prob, vector<vector<ll>> &field) {
+ll sense_high_ent_cell(const ll &N, const vector<vector<double>> &prob, vector<vector<short>> &field) {
     ll gi = -1, gj = -1;
     for (ll i = 0; i < N; i++) {
         for (ll j = 0; j < N; j++) {
@@ -243,7 +243,7 @@ ll sense_high_ent_cell(const ll &N, const vector<vector<double>> &prob, vector<v
 }
 
 void prob_naive(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19937 &rnd) {
-    vector<vector<ll>> field(N, vector<ll>(N, -1));
+    vector<vector<short>> field(N, vector<short>(N, -1));
 
     vector<vector<double>> init_prob(N, vector<double>(N, 1.0));
 
@@ -304,8 +304,8 @@ void prob_naive(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt1
     }
 }
 
-double calc_score(const ll &N, const ll &M, vector<stamp> &s, const vector<vector<ll>> &field, const vector<vector<double>> &prob, const vector<P> &solution) {
-    vector<vector<ll>> f2(N, vector<ll>(N, 0));
+double calc_score(const ll &N, const ll &M, vector<stamp> &s, const vector<vector<short>> &field, const vector<vector<double>> &prob, const vector<P> &solution) {
+    vector<vector<short>> f2(N, vector<short>(N, 0));
     for (ll k = 0; k < M; k++) {
         ll si = solution[k].i;
         ll sj = solution[k].j;
@@ -346,8 +346,8 @@ double calc_cell_score(const ll e, const double v, const double p) {
     return result;
 }
 
-double calc_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vector<vector<ll>> &field, const vector<vector<double>> &prob, const vector<P> &solution) {
-    vector<vector<ll>> f2(N, vector<ll>(N, 0));
+double calc_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vector<vector<short>> &field, const vector<vector<double>> &prob, const vector<P> &solution) {
+    vector<vector<short>> f2(N, vector<short>(N, 0));
     for (ll k = 0; k < M; k++) {
         ll si = solution[k].i;
         ll sj = solution[k].j;
@@ -366,7 +366,7 @@ double calc_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vector<
     return score;
 }
 
-double update_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vector<vector<ll>> &field, const vector<vector<double>> &prob, const vector<P> &solution, const vector<P> &prev_solution, const vector<vector<ll>> &prev_f2, const double prev_score) {
+double update_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vector<vector<short>> &field, const vector<vector<double>> &prob, const vector<P> &solution, const vector<P> &prev_solution, const vector<vector<short>> &prev_f2, const double prev_score) {
     map<pair<ll, ll>, ll> delta;
 
     for (ll k = 0; k < M; k++) {
@@ -409,7 +409,7 @@ void print_solution(const ll &N, const ll &M, vector<stamp> &s, const vector<P> 
     }
 }
 
-void calc_field_status(const ll &N, const ll &M, const vector<stamp> &s, const vector<P> &solution, vector<vector<ll>> &f) {
+void calc_field_status(const ll &N, const ll &M, const vector<stamp> &s, const vector<P> &solution, vector<vector<short>> &f) {
     for (ll i = 0; i < N; i++) {
         for (ll j = 0; j < N; j++) {
             f[i][j] = 0;
@@ -426,7 +426,7 @@ void calc_field_status(const ll &N, const ll &M, const vector<stamp> &s, const v
     }
 }
 
-bool try_hc_solution(const ll &N, const ll &M, const double &e, vector<stamp> &s, vector<vector<ll>> &field, vector<vector<double>> &prob, mt19937 &rnd) {
+bool try_hc_solution(const ll &N, const ll &M, const double &e, vector<stamp> &s, vector<vector<short>> &field, vector<vector<double>> &prob, mt19937 &rnd) {
     vector<P> solution;
 
     for (ll k = 0; k < M; k++) {
@@ -435,7 +435,7 @@ bool try_hc_solution(const ll &N, const ll &M, const double &e, vector<stamp> &s
         solution.emplace_back(si, sj);
     }
 
-    vector<vector<ll>> f2(N, vector<ll>(N, 0));
+    vector<vector<short>> f2(N, vector<short>(N, 0));
     calc_field_status(N, M, s, solution, f2);
 
     double currentScore = calc_prob_score(N, M, s, field, prob, solution);
@@ -510,7 +510,7 @@ bool try_hc_solution(const ll &N, const ll &M, const double &e, vector<stamp> &s
 }
 
 void prob_hc(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19937 &rnd) {
-    vector<vector<ll>> field(N, vector<ll>(N, -1));
+    vector<vector<short>> field(N, vector<short>(N, -1));
 
     vector<vector<double>> init_prob(N, vector<double>(N, 1.0));
 
@@ -581,10 +581,10 @@ void prob_hc(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt1993
 }
 
 void cont_hc(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19937 &rnd) {
-    vector<vector<ll>> field(N, vector<ll>(N, -1));
+    vector<vector<short>> field(N, vector<short>(N, -1));
 
     vector<P> solution;
-    vector<vector<ll>> f2(N, vector<ll>(N, 0));
+    vector<vector<short>> f2(N, vector<short>(N, 0));
     for (ll k = 0; k < M; k++) {
         ll si = next_long(rnd, 0, N - s[k].h + 1);
         ll sj = next_long(rnd, 0, N - s[k].w + 1);
@@ -644,8 +644,11 @@ void cont_hc(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt1993
             }
             // 2-opt
             for (ll cnt = 0; cnt < 100; cnt++) {
-                ll k = next_long(rnd, 0, M);
-                ll l = next_long(rnd, 0, M);
+                ll k, l;
+                do {
+                    k = next_long(rnd, 0, M);
+                    l = next_long(rnd, 0, M);
+                } while (k == l);
                 ll i = next_long(rnd, 0, N - s[k].h + 1);
                 ll j = next_long(rnd, 0, N - s[k].w + 1);
                 ll ni = next_long(rnd, 0, N - s[l].h + 1);
@@ -753,8 +756,8 @@ const ll MAX_BEAM = 20;
 const ll MAX_DEPTH = 1;
 
 void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19937 &rnd) {
-    vector<vector<ll>> field(N, vector<ll>(N, -1));
-    vector<vector<ll>> f2(N, vector<ll>(N, 0));
+    vector<vector<short>> field(N, vector<short>(N, -1));
+    vector<vector<short>> f2(N, vector<short>(N, 0));
 
     vector<vector<double>> init_prob(N, vector<double>(N, 1.0));
 
@@ -788,6 +791,7 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
         color_probability(N, prob);
 
         double current_best_score = calc_prob_score(N, M, s, field, prob, Q.top().second);
+        double prev_best_score = current_best_score;
         vector<P> current_best_solution = Q.top().second;
         for (ll d = 0; d < MAX_DEPTH; d++) {
             map<vector<P>, double> next_best_solutions;
@@ -800,6 +804,7 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
 
                 calc_field_status(N, M, s, solution, f2);
                 double current_score = calc_prob_score(N, M, s, field, prob, solution);
+                prev_best_score = min(prev_best_score, current_score);
 
                 // 1-opt
                 for (ll cnt = 0; cnt < 100; cnt++) {
@@ -915,7 +920,7 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
         double mx_ent = calc_ent(N, prob);
         double ratio = (double) remaining / total;
 
-        if (mx_ent < 0.05 || ratio < 0.4) {
+        if (mx_ent < 0.05 || ratio < 0.4 || current_best_score - prev_best_score < EPS && M <= 5) {
             double score = calc_score(N, M, s, field, prob, current_best_solution);
             if (score < EPS) {
                 calc_field_status(N, M, s, current_best_solution, f2);

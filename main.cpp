@@ -328,11 +328,13 @@ double calc_score(const ll &N, const ll &M, vector<stamp> &s, const vector<vecto
 
 double calc_diff_score(const double expect, const double actual) {
     const double diff = expect - actual;
+    double result = diff * diff * 0.1;
     if (diff < 0) {
-        return -diff;
+        result += -diff;
     } else {
-        return diff / 2.0;
+        result += diff / 2.0;
     }
+    return result;
 }
 
 double calc_cell_score(const ll e, const double v, const double p) {

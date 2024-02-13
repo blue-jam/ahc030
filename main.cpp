@@ -808,12 +808,12 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
                     ll j = next_long(rnd, 0, N - s[k].w + 1);
                     vector<P> newSolution = solution;
                     newSolution[k] = P(i, j);
-                    double score = update_prob_score(N, M, s, field, prob, newSolution, solution, f2, current_score);
 
                     if (next_best_solutions.find(newSolution) != next_best_solutions.end()) {
                         continue;
                     }
 
+                    double score = update_prob_score(N, M, s, field, prob, newSolution, solution, f2, current_score);
                     if (next_best_solutions.size() > MAX_BEAM) {
                         auto p = nextQ.top();
                         nextQ.pop();
@@ -831,8 +831,11 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
 
                 // 2-opt
                 for (ll cnt = 0; cnt < 20; cnt++) {
-                    ll k = next_long(rnd, 0, M);
-                    ll l = next_long(rnd, 0, M);
+                    ll k, l;
+                    do {
+                        k = next_long(rnd, 0, M);
+                        l = next_long(rnd, 0, M);
+                    } while (k == l);
                     ll i = next_long(rnd, 0, N - s[k].h + 1);
                     ll j = next_long(rnd, 0, N - s[k].w + 1);
                     ll ni = next_long(rnd, 0, N - s[l].h + 1);
@@ -840,12 +843,12 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
                     vector<P> newSolution = solution;
                     newSolution[k] = P(i, j);
                     newSolution[l] = P(ni, nj);
-                    double score = update_prob_score(N, M, s, field, prob, newSolution, solution, f2, current_score);
 
                     if (next_best_solutions.find(newSolution) != next_best_solutions.end()) {
                         continue;
                     }
 
+                    double score = update_prob_score(N, M, s, field, prob, newSolution, solution, f2, current_score);
                     if (next_best_solutions.size() > MAX_BEAM) {
                         auto p = nextQ.top();
                         nextQ.pop();
@@ -858,6 +861,48 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
                     if (score < current_best_score) {
                         current_best_score = score;
                         current_best_solution = newSolution;
+                    }
+                }
+
+                // 3-opt
+                if (M >= 21) {
+                    for (ll cnt = 0; cnt < 10; cnt++) {
+                        ll k, l, m;
+                        do {
+                            k = next_long(rnd, 0, M);
+                            l = next_long(rnd, 0, M);
+                            m = next_long(rnd, 0, M);
+                        } while (k == l || l == m || m == k);
+                        ll i = next_long(rnd, 0, N - s[k].h + 1);
+                        ll j = next_long(rnd, 0, N - s[k].w + 1);
+                        ll ni = next_long(rnd, 0, N - s[l].h + 1);
+                        ll nj = next_long(rnd, 0, N - s[l].w + 1);
+                        ll oi = next_long(rnd, 0, N - s[m].h + 1);
+                        ll oj = next_long(rnd, 0, N - s[m].w + 1);
+                        vector<P> newSolution = solution;
+                        newSolution[k] = P(i, j);
+                        newSolution[l] = P(ni, nj);
+                        newSolution[m] = P(oi, oj);
+
+                        if (next_best_solutions.find(newSolution) != next_best_solutions.end()) {
+                            continue;
+                        }
+
+                        double score = update_prob_score(N, M, s, field, prob, newSolution, solution, f2,
+                                                         current_score);
+                        if (next_best_solutions.size() > MAX_BEAM) {
+                            auto p = nextQ.top();
+                            nextQ.pop();
+                            next_best_solutions.erase(p.second);
+                        }
+
+                        next_best_solutions[newSolution] = score;
+                        nextQ.push(make_pair(score, newSolution));
+
+                        if (score < current_best_score) {
+                            current_best_score = score;
+                            current_best_solution = newSolution;
+                        }
                     }
                 }
             }
@@ -998,6 +1043,7 @@ int main() {
         s.push_back(st);
     }
 
+//    cont_hc(N, M, e, s, rnd);
     cont_beam(N, M, e, s, rnd);
 
     return 0;

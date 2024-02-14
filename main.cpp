@@ -781,6 +781,8 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
         Q.push(make_pair(score, solution));
     }
 
+    set<vector<P>> tried;
+
     while (remaining > 0) {
         vector<vector<vector<double>>> prob_each(M, vector<vector<double>>(N, vector<double>(N, 0)));
 
@@ -878,7 +880,7 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
                 }
 
                 // 3-opt
-                if (M >= 21) {
+                if (M >= 3) {
                     for (ll cnt = 0; cnt < 10; cnt++) {
                         ll k, l, m;
                         do {
@@ -932,27 +934,31 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
         double ratio = (double) remaining / total;
 
         if (mx_ent < 0.05 || ratio < 0.4 || current_best_score - prev_best_score < EPS && M <= 5) {
-            double score = calc_score(N, M, s, field, prob, current_best_solution);
-            if (score < EPS) {
-                calc_field_status(N, M, s, current_best_solution, f2);
-                vector<P> result;
-                for (ll i = 0; i < N; i++) {
-                    for (ll j = 0; j < N; j++) {
-                        if (f2[i][j] > 0) {
-                            result.emplace_back(i, j);
+            if (tried.find(current_best_solution) == tried.end()) {
+                double score = calc_score(N, M, s, field, prob, current_best_solution);
+                if (score < EPS) {
+                    calc_field_status(N, M, s, current_best_solution, f2);
+                    vector<P> result;
+                    for (ll i = 0; i < N; i++) {
+                        for (ll j = 0; j < N; j++) {
+                            if (f2[i][j] > 0) {
+                                result.emplace_back(i, j);
+                            }
                         }
                     }
-                }
-                cout << "a " << result.size();
-                for (auto r: result) {
-                    cout << " " << r.i << " " << r.j;
-                }
-                cout << endl;
-                flush(cout);
-                ll res;
-                cin >> res;
-                if (res == 1) {
-                    return;
+                    cout << "a " << result.size();
+                    for (auto r: result) {
+                        cout << " " << r.i << " " << r.j;
+                    }
+                    cout << endl;
+                    flush(cout);
+                    ll res;
+                    cin >> res;
+                    if (res == 1) {
+                        return;
+                    } else {
+                        tried.insert(current_best_solution);
+                    }
                 }
             }
         }

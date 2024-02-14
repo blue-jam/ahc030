@@ -823,6 +823,9 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
                     double score = update_prob_score(N, M, s, field, prob, newSolution, solution, f2, current_score);
                     if (next_best_solutions.size() > MAX_BEAM) {
                         auto p = nextQ.top();
+                        if (p.first < score) {
+                            continue;
+                        }
                         nextQ.pop();
                         next_best_solutions.erase(p.second);
                     }
@@ -858,6 +861,9 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
                     double score = update_prob_score(N, M, s, field, prob, newSolution, solution, f2, current_score);
                     if (next_best_solutions.size() > MAX_BEAM) {
                         auto p = nextQ.top();
+                        if (p.first < score) {
+                            continue;
+                        }
                         nextQ.pop();
                         next_best_solutions.erase(p.second);
                     }
@@ -899,6 +905,9 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
                                                          current_score);
                         if (next_best_solutions.size() > MAX_BEAM) {
                             auto p = nextQ.top();
+                            if (p.first < score) {
+                                continue;
+                            }
                             nextQ.pop();
                             next_best_solutions.erase(p.second);
                         }

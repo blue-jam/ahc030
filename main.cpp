@@ -6,6 +6,9 @@ using namespace std;
 
 using ll = long long;
 
+int di[] = {-1, 0, 1, 0};
+int dj[] = {0, 1, 0, -1};
+
 ll next_long(mt19937 &rnd, ll l, ll u) {
     uniform_int_distribution<ll> dist(l, u - 1);
     return dist(rnd);
@@ -34,8 +37,28 @@ struct P {
 struct stamp {
     short h, w;
     vector<P> ps;
+    vector<vector<bool>> is_edge;
 
-    stamp(short h, short w, const vector<P> &ps) : h(h), w(w), ps(ps) {}
+    stamp(short h, short w, const vector<P> &ps) : h(h), w(w), ps(ps), is_edge(ps.size(), vector<bool>(4)) {
+        vector<vector<bool>> used(h, vector<bool>(w, false));
+        for (ll i = 0; i < ps.size(); i++) {
+            used[ps[i].i][ps[i].j] = true;
+        }
+
+        for (ll i = 0; i < ps.size(); i++) {
+            ll ci = ps[i].i;
+            ll cj = ps[i].j;
+            for (ll d = 0; d < 4; d++) {
+                ll ni = ci + di[d];
+                ll nj = cj + dj[d];
+                if (ni < 0 || ni >= h || nj < 0 || nj >= w) {
+                    is_edge[i][d] = true;
+                } else {
+                    is_edge[i][d] = !used[ni][nj];
+                }
+            }
+        }
+    }
 
     ll size() const {
         return ps.size();
@@ -420,9 +443,6 @@ ll sense_high_used_cell(
     return v;
 }
 
-int di[] = {-1, 0, 1, 0};
-int dj[] = {0, 1, 0, -1};
-
 ll sense_adjacent_cell(
         const ll &N,
         const vector<vector<double>> &prob,
@@ -553,6 +573,9 @@ double calc_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vector<
             ll j = sj + s[k].ps[l].j;
             if (field[i][j] == 0) continue;
             for (ll d = 0; d < 4; d++) {
+                if (!s[k].is_edge[l][d]) {
+                    continue;
+                }
                 ll ni = i + di[d];
                 ll nj = j + dj[d];
                 if (ni < 0 || ni >= N || nj < 0 || nj >= N || field[ni][nj] == 0) {

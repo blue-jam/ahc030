@@ -578,7 +578,14 @@ double calc_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vector<
                 }
                 ll ni = i + di[d];
                 ll nj = j + dj[d];
-                if (ni < 0 || ni >= N || nj < 0 || nj >= N || field[ni][nj] == 0) {
+                if (ni < 0 || ni >= N || nj < 0 || nj >= N) {
+                    score -= 0.5;
+                    continue;
+                }
+                if (field[ni][nj] == 0) {
+                    score -= 0.5;
+                }
+                if (field[i][j] > 0 && field[ni][nj] > 0 && field[i][j] != field[ni][nj]) {
                     score -= 0.5;
                 }
             }

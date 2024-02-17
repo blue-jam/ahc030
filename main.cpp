@@ -31,6 +31,47 @@ struct stamp {
     }
 };
 
+double prob0[] = {
+                       1.0,
+/*e=0.01, k=2, x=0, */ 0.999000999000999,
+/*e=0.02, k=2, x=0, */ 0.9909365558912386,
+/*e=0.03, k=2, x=0, */ 0.9886831275720165,
+/*e=0.04, k=2, x=0, */ 0.9669421487603306,
+/*e=0.05, k=2, x=0, */ 0.946875,
+/*e=0.06, k=2, x=0, */ 0.9347593582887701,
+/*e=0.07, k=2, x=0, */ 0.9035369774919614,
+/*e=0.08, k=2, x=0, */ 0.8823529411764706,
+/*e=0.09, k=2, x=0, */ 0.8824833702882483,
+/*e=0.1,  k=2, x=0, */ 0.8819362455726092,
+/*e=0.11, k=2, x=0, */ 0.8452380952380952,
+/*e=0.12, k=2, x=0, */ 0.8325471698113207,
+/*e=0.13, k=2, x=0, */ 0.8238153098420413,
+/*e=0.14, k=2, x=0, */ 0.805952380952381,
+/*e=0.15, k=2, x=0, */ 0.784841075794621,
+/*e=0.16, k=2, x=0, */ 0.7632911392405063,
+/*e=0.17, k=2, x=0, */ 0.7518427518427518,
+/*e=0.18, k=2, x=0, */ 0.7525510204081632,
+/*e=0.19, k=2, x=0, */ 0.7392900856793145,
+/*e=0.2,  k=2, x=0, */ 0.7269129287598944
+};
+
+void calc_field_status(const ll &N, const ll &M, const vector<stamp> &s, const vector<P> &solution, vector<vector<short>> &f) {
+    for (ll i = 0; i < N; i++) {
+        for (ll j = 0; j < N; j++) {
+            f[i][j] = 0;
+        }
+    }
+    for (ll k = 0; k < M; k++) {
+        ll si = solution[k].i;
+        ll sj = solution[k].j;
+        for (ll l = 0; l < s[k].size(); l++) {
+            ll i = s[k].ps[l].i;
+            ll j = s[k].ps[l].j;
+            f[si + i][sj + j] += 1;
+        }
+    }
+}
+
 double calc_ent(const ll &N, const vector<vector<double>> &prob) {
     double mx_ent = 0.0;
     for (ll i = 0; i < N; i++) {
@@ -223,6 +264,20 @@ void calc_prob(const ll &N, const ll &M, const vector<vector<short>> &field, con
     }
 }
 
+P find_high_ent_cell(const ll &N, const vector<vector<double>> &prob, vector<vector<short>> &field) {
+    ll gi = -1, gj = -1;
+    for (ll i = 0; i < N; i++) {
+        for (ll j = 0; j < N; j++) {
+            if (field[i][j] < 0 && (gi < 0 || abs(prob[i][j] - 0.5) < abs(prob[gi][gj] - 0.5))) {
+                gi = i;
+                gj = j;
+            }
+        }
+    }
+
+    return P(gi, gj);
+}
+
 ll sense_high_ent_cell(const ll &N, const vector<vector<double>> &prob, vector<vector<short>> &field) {
     ll gi = -1, gj = -1;
     for (ll i = 0; i < N; i++) {
@@ -233,6 +288,48 @@ ll sense_high_ent_cell(const ll &N, const vector<vector<double>> &prob, vector<v
             }
         }
     }
+    cout << "q 1 " << gi << " " << gj << endl;
+    flush(cout);
+    ll v;
+    cin >> v;
+    field[gi][gj] = v;
+
+    return v;
+}
+
+ll sense_high_prod_cell(
+        const ll &N,
+        const vector<vector<double>> &prob,
+        vector<vector<short>> &field,
+        const vector<stamp> &s,
+        const vector<vector<P>> solutions
+        ) {
+    vector<vector<double>> used_prob(N, vector<double>(N, 0));
+
+    vector<vector<short>> f2(N, vector<short>(N, 0));
+    for (ll k = 0; k < solutions.size(); k++) {
+        calc_field_status(N, s.size(), s, solutions[k], f2);
+        for (ll i = 0; i < N; i++) {
+            for (ll j = 0; j < N; j++) {
+                used_prob[i][j] += f2[i][j] > 0 ? 1 : 0;
+            }
+        }
+    }
+    for (ll i = 0; i < N; i++) {
+        for (ll j = 0; j < N; j++) {
+            used_prob[i][j] /= solutions.size();
+        }
+    }
+    ll gi = -1, gj = -1;
+    for (ll i = 0; i < N; i++) {
+        for (ll j = 0; j < N; j++) {
+            if (field[i][j] < 0 && (gi < 0 || used_prob[i][j] > used_prob[gi][gj])) {
+                gi = i;
+                gj = j;
+            }
+        }
+    }
+
     cout << "q 1 " << gi << " " << gj << endl;
     flush(cout);
     ll v;
@@ -407,23 +504,6 @@ void print_solution(const ll &N, const ll &M, vector<stamp> &s, const vector<P> 
             ll i = s[k].ps[l].i;
             ll j = s[k].ps[l].j;
             cout << "#c " << solution[k].i + i << " " << solution[k].j + j << " yellow" << endl;
-        }
-    }
-}
-
-void calc_field_status(const ll &N, const ll &M, const vector<stamp> &s, const vector<P> &solution, vector<vector<short>> &f) {
-    for (ll i = 0; i < N; i++) {
-        for (ll j = 0; j < N; j++) {
-            f[i][j] = 0;
-        }
-    }
-    for (ll k = 0; k < M; k++) {
-        ll si = solution[k].i;
-        ll sj = solution[k].j;
-        for (ll l = 0; l < s[k].size(); l++) {
-            ll i = s[k].ps[l].i;
-            ll j = s[k].ps[l].j;
-            f[si + i][sj + j] += 1;
         }
     }
 }
@@ -985,7 +1065,20 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
             }
         }
 
-        ll v = sense_high_ent_cell(N, prob, field);
+        vector<vector<P>> solution_list;
+        for (auto p: solutions) {
+            solution_list.push_back(p.first);
+        }
+        ll v;
+        if (remaining >= total * 0.1) {
+            v = sense_high_ent_cell(N, prob, field);
+        } else {
+            vector<vector<P>> solution_list;
+            for (auto p: solutions) {
+                solution_list.push_back(p.first);
+            }
+            v = sense_high_prod_cell(N, prob, field, s, solution_list);
+        }
         remaining -= v;
     }
 
@@ -1065,7 +1158,6 @@ int main() {
         s.push_back(st);
     }
 
-//    cont_hc(N, M, e, s, rnd);
     cont_beam(N, M, e, s, rnd);
 
     return 0;

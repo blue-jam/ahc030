@@ -350,6 +350,48 @@ ll sense_high_prod_cell(
     return v;
 }
 
+int di[] = {-1, 0, 1, 0};
+int dj[] = {0, 1, 0, -1};
+
+ll sense_adjacent_cell(
+        const ll &N,
+        const vector<vector<double>> &prob,
+        vector<vector<short>> &field,
+        const vector<stamp> &s,
+        const vector<vector<P>> solutions
+) {
+    vector<vector<short>> adj(N, vector<short>(N, 0));
+    for (ll i = 0; i < N; i++) {
+        for (ll j = 0; j < N; j++) {
+            if (field[i][j] <= 0) continue;
+            for (ll d = 0; d < 4; d++) {
+                ll ni = i + di[d];
+                ll nj = j + dj[d];
+                if (ni < 0 || ni >= N || nj < 0 || nj >= N) continue;
+                adj[ni][nj] += 1;
+            }
+        }
+    }
+
+    ll gi = -1, gj = -1;
+    for (ll i = 0; i < N; i++) {
+        for (ll j = 0; j < N; j++) {
+            if (field[i][j] < 0 && (gi < 0 || adj[i][j] > adj[gi][gj])) {
+                gi = i;
+                gj = j;
+            }
+        }
+    }
+
+    cout << "q 1 " << gi << " " << gj << endl;
+    flush(cout);
+    ll v;
+    cin >> v;
+    field[gi][gj] = v;
+
+    return v;
+}
+
 void prob_naive(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19937 &rnd) {
     vector<vector<short>> field(N, vector<short>(N, -1));
 
@@ -1111,14 +1153,26 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
             solution_list.push_back(p.first);
         }
         ll v;
-        if (remaining >= total * 0.1) {
-            v = sense_high_ent_cell(N, prob, field);
-        } else {
-            vector<vector<P>> solution_list;
-            for (auto p: solutions) {
-                solution_list.push_back(p.first);
+        if (M < 18) {
+            if (remaining >= total * 0.1) {
+                v = sense_high_ent_cell(N, prob, field);
+            } else {
+                vector<vector<P>> solution_list;
+                for (auto p: solutions) {
+                    solution_list.push_back(p.first);
+                }
+                v = sense_high_prod_cell(N, prob, field, s, solution_list);
             }
-            v = sense_high_prod_cell(N, prob, field, s, solution_list);
+        } else {
+            if (remaining >= total * 0.3) {
+                v = sense_high_ent_cell(N, prob, field);
+            } else {
+                vector<vector<P>> solution_list;
+                for (auto p: solutions) {
+                    solution_list.push_back(p.first);
+                }
+                v = sense_adjacent_cell(N, prob, field, s, solution_list);
+            }
         }
         remaining -= v;
     }

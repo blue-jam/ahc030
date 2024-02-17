@@ -462,6 +462,30 @@ ll sense_adjacent_cell(
     return v;
 }
 
+ll sense_high_prob_cell(
+        const ll &N,
+        const vector<vector<double>> &prob,
+        vector<vector<short>> &field
+) {
+    ll gi = -1, gj = -1;
+    for (ll i = 0; i < N; i++) {
+        for (ll j = 0; j < N; j++) {
+            if (field[i][j] < 0 && (gi < 0 || prob[i][j] > prob[gi][gj])) {
+                gi = i;
+                gj = j;
+            }
+        }
+    }
+
+    cout << "q 1 " << gi << " " << gj << endl;
+    flush(cout);
+    ll v;
+    cin >> v;
+    field[gi][gj] = v;
+
+    return v;
+}
+
 double calc_score(const ll &N, const ll &M, vector<stamp> &s, const vector<vector<short>> &field, const vector<vector<double>> &prob, const vector<P> &solution) {
     vector<vector<short>> f2(N, vector<short>(N, 0));
     for (ll k = 0; k < M; k++) {
@@ -523,39 +547,6 @@ double calc_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vector<
             score += calc_cell_score(field[i][j], f2[i][j], prob[i][j]);
         }
     }
-    return score;
-}
-
-double update_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vector<vector<short>> &field, const vector<vector<double>> &prob, const vector<P> &solution, const vector<P> &prev_solution, const vector<vector<short>> &prev_f2, const double prev_score) {
-    map<pair<ll, ll>, ll> delta;
-
-    for (ll k = 0; k < M; k++) {
-        if (solution[k].i != prev_solution[k].i || solution[k].j != prev_solution[k].j) {
-            ll pi = prev_solution[k].i;
-            ll pj = prev_solution[k].j;
-            ll ni = solution[k].i;
-            ll nj = solution[k].j;
-            for (ll l = 0; l < s[k].size(); l++) {
-                ll i = s[k].ps[l].i;
-                ll j = s[k].ps[l].j;
-                delta[make_pair(pi + i, pj + j)] -= 1;
-                delta[make_pair(ni + i, nj + j)] += 1;
-            }
-        }
-    }
-
-    double score = prev_score;
-
-    for (auto p: delta) {
-        ll i = p.first.first;
-        ll j = p.first.second;
-        ll v = p.second;
-
-        ll nv = prev_f2[i][j] + v;
-        score -= calc_cell_score(field[i][j], prev_f2[i][j], prob[i][j]);
-        score += calc_cell_score(field[i][j], nv, prob[i][j]);
-    }
-
     return score;
 }
 
@@ -647,7 +638,7 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
                         continue;
                     }
 
-                    double score = update_prob_score(N, M, s, field, prob, newSolution, solution, f2, current_score);
+                    double score = calc_prob_score(N, M, s, field, prob, newSolution);
                     if (next_best_solutions.size() > MAX_BEAM) {
                         auto p = nextQ.top();
                         if (p.first < score) {
@@ -685,7 +676,7 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
                         continue;
                     }
 
-                    double score = update_prob_score(N, M, s, field, prob, newSolution, solution, f2, current_score);
+                    double score = calc_prob_score(N, M, s, field, prob, newSolution);
                     if (next_best_solutions.size() > MAX_BEAM) {
                         auto p = nextQ.top();
                         if (p.first < score) {
@@ -728,8 +719,7 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
                             continue;
                         }
 
-                        double score = update_prob_score(N, M, s, field, prob, newSolution, solution, f2,
-                                                         current_score);
+                        double score = calc_prob_score(N, M, s, field, prob, newSolution);
                         if (next_best_solutions.size() > MAX_BEAM) {
                             auto p = nextQ.top();
                             if (p.first < score) {

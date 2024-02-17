@@ -532,6 +532,7 @@ double calc_cell_score(const ll e, const double v, const double p) {
 
 double calc_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vector<vector<short>> &field, const vector<vector<double>> &prob, const vector<P> &solution) {
     vector<vector<short>> f2(N, vector<short>(N, 0));
+    double score = 0.0;
     for (ll k = 0; k < M; k++) {
         ll si = solution[k].i;
         ll sj = solution[k].j;
@@ -541,10 +542,24 @@ double calc_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vector<
             f2[si + i][sj + j] += 1;
         }
     }
-    double score = 0.0;
     for (ll i = 0; i < N; i++) {
         for (ll j = 0; j < N; j++) {
             score += calc_cell_score(field[i][j], f2[i][j], prob[i][j]);
+        }
+    }
+    for (ll k = 0; k < M; k++) {
+        ll si = solution[k].i;
+        ll sj = solution[k].j;
+        for (ll l = 0; l < s[k].size(); l++) {
+            ll i = si + s[k].ps[l].i;
+            ll j = sj + s[k].ps[l].j;
+            for (ll d = 0; d < 4; d++) {
+                ll ni = i + di[d];
+                ll nj = j + dj[d];
+                if (ni < 0 || ni >= N || nj < 0 || nj >= N || field[ni][nj] == 0) {
+                    score -= 0.5;
+                }
+            }
         }
     }
     return score;

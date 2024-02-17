@@ -230,7 +230,7 @@ void color_probability(const ll &N, const vector<vector<double>> &prob) {
 
 const double PP = 0.01;
 
-void calc_init_prob(const ll &N, vector<vector<double>> &init_prob) {
+void calc_init_prob(const ll &N, vector<vector<double>> &init_prob, vector<vector<short>> &field) {
     const ll SN = min(sqrt(N), 3.0);
     for (ll si = 0; si < N; si += SN) {
         for (ll sj = 0; sj < N; sj += SN) {
@@ -249,9 +249,26 @@ void calc_init_prob(const ll &N, vector<vector<double>> &init_prob) {
             ll v;
             cin >> v;
             double a = min(SN, N - si) * min(SN, N - sj);
-            for (ll i = 0; si + i < min(si + SN, N); i++) {
-                for (ll j = 0; sj + j < min(sj + SN, N); j++) {
-                    init_prob[si + i][sj + j] = min((double)v / a + PP, 0.99);
+            if (v / a < 1.5) {
+                for (ll i = 0; si + i < min(si + SN, N); i++) {
+                    for (ll j = 0; sj + j < min(sj + SN, N); j++) {
+                        init_prob[si + i][sj + j] = min((double) v / a + PP, 0.99);
+                    }
+                }
+            } else {
+                for (ll i = si; i < min(si + SN, N); i++) {
+                    for (ll j = sj; j < min(sj + SN, N); j++) {
+                        cout << "q 1 " << i << " " << j << endl;
+                        flush(cout);
+                        ll v;
+                        cin >> v;
+                        field[i][j] = v;
+                        if (field[i][j] == 0) {
+                            init_prob[i][j] = 0.0;
+                        } else {
+                            init_prob[i][j] = 1.0;
+                        }
+                    }
                 }
             }
         }
@@ -361,7 +378,7 @@ ll sense_high_ent_cell(const ll &N, const vector<vector<double>> &prob, vector<v
     return v;
 }
 
-ll sense_high_prod_cell(
+ll sense_high_used_cell(
         const ll &N,
         const vector<vector<double>> &prob,
         vector<vector<short>> &field,
@@ -561,9 +578,17 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
 
     vector<vector<double>> init_prob(N, vector<double>(N, 1.0));
 
-    calc_init_prob(N, init_prob);
+    calc_init_prob(N, init_prob, field);
     ll remaining = calc_remaining(M, s);
     ll total = remaining;
+
+    for (ll i = 0; i < N; i++) {
+        for (ll j = 0; j < N; j++) {
+            if (field[i][j] > 0) {
+                remaining -= field[i][j];
+            }
+        }
+    }
 
     map<vector<P>, double> solutions;
     priority_queue<pair<double, vector<P>>> Q;
@@ -798,7 +823,7 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
                 for (auto p: solutions) {
                     solution_list.push_back(p.first);
                 }
-                v = sense_high_prod_cell(N, prob, field, s, solution_list);
+                v = sense_high_used_cell(N, prob, field, s, solution_list);
             }
         } else {
             if (remaining >= total * 0.3) {

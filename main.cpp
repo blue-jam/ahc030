@@ -437,10 +437,10 @@ double calc_score(const ll &N, const ll &M, vector<stamp> &s, const vector<vecto
 double calc_diff_score(const double expect, const double actual) {
     const double diff = expect - actual;
     double result = diff * diff * 0.1;
-    if (diff < 0) {
-        result += -diff;
+    if (expect == 0 && actual > 0) {
+        result += 10;
     } else {
-        result += diff / 2.0;
+        result += abs(diff);
     }
     return result;
 }

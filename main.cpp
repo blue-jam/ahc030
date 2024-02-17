@@ -11,6 +11,17 @@ ll next_long(mt19937 &rnd, ll l, ll u) {
     return dist(rnd);
 }
 
+// generate a random number in double range [l, r)
+double next_double(mt19937 &rnd, double l, double r) {
+    uniform_real_distribution<double> dist(l, r);
+    return dist(rnd);
+}
+
+// generate a random number in range [0,1)
+double next_prob(mt19937 &rnd) {
+    return next_double(rnd, 0, 1);
+}
+
 struct P {
     short i, j;
     P(short i, short j) : i(i), j(j) {}
@@ -460,6 +471,36 @@ double calc_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vector<
     for (ll i = 0; i < N; i++) {
         for (ll j = 0; j < N; j++) {
             score += calc_cell_score(field[i][j], f2[i][j], prob[i][j]);
+        }
+    }
+    return score;
+}
+
+double calc_cell_score2(const ll e, const double v, const double p) {
+    double result = 0.0;
+    if (e >= 0) {
+        result += calc_diff_score(e, v);
+    } else {
+        result -= (p - 0.5) * v;
+    }
+    return result;
+}
+
+double calc_prob_score2(const ll &N, const ll &M, vector<stamp> &s, const vector<vector<short>> &field, const vector<vector<double>> &prob, const vector<P> &solution) {
+    vector<vector<short>> f2(N, vector<short>(N, 0));
+    for (ll k = 0; k < M; k++) {
+        ll si = solution[k].i;
+        ll sj = solution[k].j;
+        for (ll l = 0; l < s[k].size(); l++) {
+            ll i = s[k].ps[l].i;
+            ll j = s[k].ps[l].j;
+            f2[si + i][sj + j] += 1;
+        }
+    }
+    double score = 0.0;
+    for (ll i = 0; i < N; i++) {
+        for (ll j = 0; j < N; j++) {
+            score += calc_cell_score2(field[i][j], f2[i][j], prob[i][j]);
         }
     }
     return score;
@@ -1078,6 +1119,201 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
                 solution_list.push_back(p.first);
             }
             v = sense_high_prod_cell(N, prob, field, s, solution_list);
+        }
+        remaining -= v;
+    }
+
+    vector<P> result;
+    for (ll i = 0; i < N; i++) {
+        for (ll j = 0; j < N; j++) {
+            if (field[i][j] > 0) {
+                result.emplace_back(i, j);
+            }
+        }
+    }
+
+    cout << "a " << result.size();
+    for (auto r: result) {
+        cout << " " << r.i << " " << r.j;
+    }
+}
+
+const ll GEN = 20;
+const ll MAX_N = 200;
+const double REMAIN_PROB = 0.2;
+const double MUTATION_PROB = 0.1;
+const double NORMAL_PROB = 1 - REMAIN_PROB - MUTATION_PROB;
+
+ll roulette(const vector<double> &p, mt19937 &rnd) {
+    ll k = 0;
+    double pp = next_prob(rnd);
+    double sum = 0.0;
+    for (ll m = 0; m < MAX_N; m++) {
+        sum += p[m];
+        if (sum >= pp) {
+            k = m;
+            break;
+        }
+    }
+    return k;
+}
+
+void ga(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19937 &rnd) {
+    vector<vector<short>> field(N, vector<short>(N, -1));
+    vector<vector<short>> f2(N, vector<short>(N, 0));
+
+    vector<vector<double>> init_prob(N, vector<double>(N, 1.0));
+
+    calc_init_prob(N, init_prob);
+    ll remaining = calc_remaining(M, s);
+    ll total = remaining;
+
+    vector<vector<P>> solutions;
+    for (ll l = 0; l < MAX_N; l++) {
+        vector<P> solution;
+        for (ll k = 0; k < M; k++) {
+            ll si = next_long(rnd, 0, N - s[k].h + 1);
+            ll sj = next_long(rnd, 0, N - s[k].w + 1);
+            solution.emplace_back(si, sj);
+        }
+        solutions.push_back(solution);
+    }
+
+    set<vector<P>> tried;
+
+    while (remaining > 0) {
+        vector<vector<vector<double>>> prob_each(M, vector<vector<double>>(N, vector<double>(N, 0)));
+
+        for (ll k = 0; k < M; k++) {
+            calc_prob_each(N, field, init_prob, k, s, prob_each);
+        }
+
+        vector<vector<double>> prob(N, vector<double>(N, 0));
+        calc_prob(N, M, field, prob_each, prob);
+        color_probability(N, prob);
+
+        double current_best_score = calc_prob_score(N, M, s, field, prob, solutions[0]);
+        double prev_best_score = current_best_score;
+        for (ll l = 0; l < MAX_N; l++) {
+            current_best_score = min(current_best_score, calc_prob_score2(N, M, s, field, prob, solutions[l]));
+        }
+        vector<P> current_best_solution = solutions[0];
+
+        for (ll g = 0; g < GEN; g++) {
+            vector<double> scores;
+            double mx_score = -1e18;
+            for (ll l = 0; l < MAX_N; l++) {
+                scores.push_back(calc_prob_score2(N, M, s, field, prob, solutions[l]));
+                mx_score = max(mx_score, scores[l]);
+            }
+            vector<double> p(MAX_N, 0.0);
+            double sum = 0.0;
+            for (ll l = 0; l < MAX_N; l++) {
+                p[l] = - (scores[l] - mx_score) + 1.0;
+                sum += p[l];
+            }
+            for (ll l = 0; l < MAX_N; l++) {
+                p[l] /= sum;
+            }
+
+            vector<vector<P>> next_solutions;
+            for (ll l = 0; l < MAX_N; l++) {
+                vector<P> newSolution;
+                double op = next_prob(rnd);
+                if (op < REMAIN_PROB) {
+                    ll k = roulette(p, rnd);
+                    newSolution = solutions[k];
+                } else if (op < REMAIN_PROB + MUTATION_PROB) {
+                    ll k = roulette(p, rnd);
+                    ll i = next_long(rnd, 0, M);
+                    ll si = next_long(rnd, 0, N - s[i].h + 1);
+                    ll sj = next_long(rnd, 0, N - s[i].w + 1);
+
+                    newSolution = solutions[k];
+                    newSolution[i] = P(si, sj);
+                } else {
+                    ll k = roulette(p, rnd);
+                    ll l = roulette(p, rnd);
+                    ll i = next_long(rnd, 1, M);
+                    newSolution = solutions[k];
+                    for (ll j = i; j < M; j++) {
+                        newSolution[j] = solutions[l][j];
+                    }
+                }
+                next_solutions.push_back(newSolution);
+
+                double score = calc_prob_score2(N, M, s, field, prob, newSolution);
+                if (score < current_best_score) {
+                    current_best_score = score;
+                    current_best_solution = newSolution;
+                }
+            }
+
+            solutions = next_solutions;
+        }
+
+        print_solution(N, M, s, current_best_solution);
+
+        double mx_ent = calc_ent(N, prob);
+        double ratio = (double) remaining / total;
+
+        if (mx_ent < 0.05 || ratio < 0.4 || current_best_score - prev_best_score < EPS && M <= 5) {
+            if (tried.find(current_best_solution) == tried.end()) {
+                double score = calc_score(N, M, s, field, prob, current_best_solution);
+                if (score < EPS) {
+                    calc_field_status(N, M, s, current_best_solution, f2);
+                    vector<P> result;
+                    for (ll i = 0; i < N; i++) {
+                        for (ll j = 0; j < N; j++) {
+                            if (f2[i][j] > 0) {
+                                result.emplace_back(i, j);
+                            }
+                        }
+                    }
+                    cout << "a " << result.size();
+                    for (auto r: result) {
+                        cout << " " << r.i << " " << r.j;
+                    }
+                    cout << endl;
+                    flush(cout);
+                    ll res;
+                    cin >> res;
+                    if (res == 1) {
+                        return;
+                    } else {
+                        tried.insert(current_best_solution);
+                    }
+                }
+            }
+        }
+
+        if (mx_ent < EPS) {
+            ll c = naive_matcher(N, M, e, s, field, prob);
+            for (ll i = 0; i < N; i++) {
+                for (ll j = 0; j < N; j++) {
+                    if (field[i][j] < 0) {
+                        prob[i][j] *= init_prob[i][j];
+                    }
+                }
+            }
+            double m = calc_ent(N, prob);
+            if (m < EPS) {
+                for (ll i = 0; i < N; i++) {
+                    for (ll j = 0; j < N; j++) {
+                        if (prob[i][j] > 0) {
+                            field[i][j] = 1;
+                        }
+                    }
+                }
+                break;
+            }
+        }
+
+        ll v;
+        if (remaining >= total * 0.1) {
+            v = sense_high_ent_cell(N, prob, field);
+        } else {
+            v = sense_high_prod_cell(N, prob, field, s, solutions);
         }
         remaining -= v;
     }

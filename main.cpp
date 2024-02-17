@@ -553,6 +553,7 @@ double calc_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vector<
         for (ll l = 0; l < s[k].size(); l++) {
             ll i = si + s[k].ps[l].i;
             ll j = sj + s[k].ps[l].j;
+            if (field[i][j] == 0) continue;
             for (ll d = 0; d < 4; d++) {
                 ll ni = i + di[d];
                 ll nj = j + dj[d];

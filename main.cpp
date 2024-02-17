@@ -523,10 +523,8 @@ double calc_cell_score(const ll e, const double v, const double p) {
     double result = 0.0;
     if (e >= 0) {
         result += calc_diff_score(e, v);
-        result -= v * p;
-    } else {
-        result -= (p - 0.5) * v;
     }
+    result -= v * p;
     return result;
 }
 

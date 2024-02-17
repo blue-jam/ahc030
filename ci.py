@@ -75,14 +75,17 @@ def generate_html(prev_file, scores_file, output_file):
                 prev_value = float(prev_data[i][j])
                 score_value = float(scores_data[i][j])
                 difference = abs(score_value - prev_value)
+                ci = i + 9
+                cj = j + 1
+                cc = count[ci][cj]
                 if score_value < prev_value:
                     color_intensity = int((prev_value - score_value) * 10)
-                    html_content += f"<td style='background-color: rgba(0, 255, 0, 0.{color_intensity})'>{score_value}</td>\n"
+                    html_content += f"<td style='background-color: rgba(0, 255, 0, 0.{color_intensity})'>{score_value}/{cc}</td>\n"
                 elif score_value > prev_value:
                     color_intensity = int((score_value - prev_value) * 10)
-                    html_content += f"<td style='background-color: rgba(255, 0, 0, 0.{color_intensity})'>{score_value}</td>\n"
+                    html_content += f"<td style='background-color: rgba(255, 0, 0, 0.{color_intensity})'>{score_value}/{cc}</td>\n"
                 else:
-                    html_content += f"<td>{score_value}</td>\n"
+                    html_content += f"<td>{score_value}/{cc}</td>\n"
         html_content += "</tr>\n"
     html_content += "</table>"
 

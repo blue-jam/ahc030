@@ -320,19 +320,23 @@ ll calc_remaining(const ll &M, vector<stamp> &s) {
 }
 
 void calc_prob_each(const ll &N, const vector<vector<short>> &field, const vector<vector<double>> &init_prob, ll k,
-                    vector<stamp> &s, vector<vector<vector<double>>> &prob_each) {
+                    vector<stamp> &s, vector<vector<vector<double>>> &prob_each, const ll &remaining) {
     ll cnt = 0;
     for (ll si = 0; si + s[k].h <= N; si++) {
         for (ll sj = 0; sj + s[k].w <= N; sj++) {
             bool ok = true;
+            ll newCells = 0;
             for (ll l = 0; l < s[k].size(); l++) {
                 ll i = s[k].ps[l].i;
                 ll j = s[k].ps[l].j;
                 if (field[si + i][sj + j] == 0) {
                     ok = false;
                 }
+                if (field[si + i][sj + j] < 0) {
+                    newCells += 1;
+                }
             }
-            if (ok) {
+            if (ok && newCells <= remaining) {
                 cnt++;
                 for (ll l = 0; l < s[k].size(); l++) {
                     ll i = s[k].ps[l].i;
@@ -649,7 +653,7 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
         vector<vector<vector<double>>> prob_each(M, vector<vector<double>>(N, vector<double>(N, 0)));
 
         for (ll k = 0; k < M; k++) {
-            calc_prob_each(N, field, init_prob, k, s, prob_each);
+            calc_prob_each(N, field, init_prob, k, s, prob_each, remaining);
         }
 
         vector<vector<double>> prob(N, vector<double>(N, 0));

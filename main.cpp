@@ -853,7 +853,7 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
         ll v;
         if (M < 18) {
             if (remaining >= total * 0.1) {
-                v = sense_high_ent_cell(N, prob, field);
+                v = sense_high_prob_cell(N, prob, field);
             } else {
                 vector<vector<P>> solution_list;
                 for (auto p: solutions) {
@@ -863,7 +863,7 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
             }
         } else {
             if (remaining >= total * 0.3) {
-                v = sense_high_ent_cell(N, prob, field);
+                v = sense_high_prob_cell(N, prob, field);
             } else {
                 vector<vector<P>> solution_list;
                 for (auto p: solutions) {
@@ -887,6 +887,27 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
     cout << "a " << result.size();
     for (auto r: result) {
         cout << " " << r.i << " " << r.j;
+    }
+}
+
+void dig_prob(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19937 &rnd) {
+    const ll SN = min(sqrt(N), 3.0);
+    for (ll si = 0; si < N; si += SN) {
+        for (ll sj = 0; sj < N; sj += SN) {
+            const ll h = min(SN, N - si);
+            const ll w = min(SN, N - sj);
+            const ll a = h * w;
+            vector<P> ps;
+            for (ll i = 0; i < h; i++) {
+                for (ll j = 0; j < w; j++) {
+                    ps.emplace_back(si + i, sj + j);
+                }
+            }
+            cout << "q " << ps.size();
+            for (auto p: ps) {
+                cout << " " << p.i << " " << p.j;
+            }
+        }
     }
 }
 

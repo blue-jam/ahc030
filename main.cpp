@@ -533,8 +533,10 @@ double calc_diff_score(const double expect, const double actual) {
     double result = diff * diff * 0.1;
     if (expect == 0 && actual > 0) {
         result += 10;
-    } else {
+    } else if (diff < 0){
         result += abs(diff);
+    } else {
+        result += abs(diff) * 1.5;
     }
     return result;
 }

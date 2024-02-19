@@ -554,7 +554,7 @@ double calc_cell_score(const ll e, const double v, const double p) {
     return result;
 }
 
-double calc_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vector<vector<short>> &field, const vector<vector<double>> &prob, const vector<P> &solution) {
+double calc_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vector<vector<short>> &field, const vector<vector<double>> &prob, const vector<P> &solution, const ll &remaining) {
     vector<vector<short>> f2(N, vector<short>(N, 0));
     double score = 0.0;
     for (ll k = 0; k < M; k++) {
@@ -571,12 +571,16 @@ double calc_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vector<
             score += calc_cell_score(field[i][j], f2[i][j], prob[i][j]);
         }
     }
+    ll newCells = 0;
     for (ll k = 0; k < M; k++) {
         ll si = solution[k].i;
         ll sj = solution[k].j;
         for (ll l = 0; l < s[k].size(); l++) {
             ll i = si + s[k].ps[l].i;
             ll j = sj + s[k].ps[l].j;
+            if (field[i][j] < 0) {
+                newCells += 1;
+            }
             if (field[i][j] == 0) continue;
             for (ll d = 0; d < 4; d++) {
                 if (!s[k].is_edge[l][d]) {
@@ -596,6 +600,9 @@ double calc_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vector<
                 }
             }
         }
+    }
+    if (newCells > remaining) {
+        score += 100;
     }
     return score;
 }
@@ -640,7 +647,7 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
             ll sj = next_long(rnd, 0, N - s[k].w + 1);
             solution.emplace_back(si, sj);
         }
-        double score = calc_prob_score(N, M, s, field, init_prob, solution);
+        double score = calc_prob_score(N, M, s, field, init_prob, solution, remaining);
         solutions[solution] = score;
         Q.push(make_pair(score, solution));
     }
@@ -660,7 +667,7 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
         calc_prob(N, M, field, prob_each, prob);
         color_probability(N, prob);
 
-        double current_best_score = calc_prob_score(N, M, s, field, prob, Q.top().second);
+        double current_best_score = calc_prob_score(N, M, s, field, prob, Q.top().second, remaining);
         double prev_best_score = current_best_score;
         vector<P> current_best_solution = Q.top().second;
         for (ll d = 0; d < MAX_DEPTH; d++) {
@@ -673,7 +680,7 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
                 solutions.erase(solution);
 
                 calc_field_status(N, M, s, solution, f2);
-                double current_score = calc_prob_score(N, M, s, field, prob, solution);
+                double current_score = calc_prob_score(N, M, s, field, prob, solution, remaining);
                 prev_best_score = min(prev_best_score, current_score);
 
                 // 1-opt
@@ -688,7 +695,7 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
                         continue;
                     }
 
-                    double score = calc_prob_score(N, M, s, field, prob, newSolution);
+                    double score = calc_prob_score(N, M, s, field, prob, newSolution, remaining);
                     if (next_best_solutions.size() > MAX_BEAM) {
                         auto p = nextQ.top();
                         if (p.first < score) {
@@ -726,7 +733,7 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
                         continue;
                     }
 
-                    double score = calc_prob_score(N, M, s, field, prob, newSolution);
+                    double score = calc_prob_score(N, M, s, field, prob, newSolution, remaining);
                     if (next_best_solutions.size() > MAX_BEAM) {
                         auto p = nextQ.top();
                         if (p.first < score) {
@@ -769,7 +776,7 @@ void cont_beam(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt19
                             continue;
                         }
 
-                        double score = calc_prob_score(N, M, s, field, prob, newSolution);
+                        double score = calc_prob_score(N, M, s, field, prob, newSolution, remaining);
                         if (next_best_solutions.size() > MAX_BEAM) {
                             auto p = nextQ.top();
                             if (p.first < score) {

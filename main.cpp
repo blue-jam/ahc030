@@ -65,30 +65,6 @@ struct stamp {
     }
 };
 
-double prob0[] = {
-                       1.0,
-/*e=0.01, k=2, x=0, */ 0.999000999000999,
-/*e=0.02, k=2, x=0, */ 0.9909365558912386,
-/*e=0.03, k=2, x=0, */ 0.9886831275720165,
-/*e=0.04, k=2, x=0, */ 0.9669421487603306,
-/*e=0.05, k=2, x=0, */ 0.946875,
-/*e=0.06, k=2, x=0, */ 0.9347593582887701,
-/*e=0.07, k=2, x=0, */ 0.9035369774919614,
-/*e=0.08, k=2, x=0, */ 0.8823529411764706,
-/*e=0.09, k=2, x=0, */ 0.8824833702882483,
-/*e=0.1,  k=2, x=0, */ 0.8819362455726092,
-/*e=0.11, k=2, x=0, */ 0.8452380952380952,
-/*e=0.12, k=2, x=0, */ 0.8325471698113207,
-/*e=0.13, k=2, x=0, */ 0.8238153098420413,
-/*e=0.14, k=2, x=0, */ 0.805952380952381,
-/*e=0.15, k=2, x=0, */ 0.784841075794621,
-/*e=0.16, k=2, x=0, */ 0.7632911392405063,
-/*e=0.17, k=2, x=0, */ 0.7518427518427518,
-/*e=0.18, k=2, x=0, */ 0.7525510204081632,
-/*e=0.19, k=2, x=0, */ 0.7392900856793145,
-/*e=0.2,  k=2, x=0, */ 0.7269129287598944
-};
-
 void calc_field_status(const ll &N, const ll &M, const vector<stamp> &s, const vector<P> &solution, vector<vector<short>> &f) {
     for (ll i = 0; i < N; i++) {
         for (ll j = 0; j < N; j++) {
@@ -607,7 +583,7 @@ double calc_prob_score(const ll &N, const ll &M, vector<stamp> &s, const vector<
     return score;
 }
 
-void print_solution(const ll &N, const ll &M, vector<stamp> &s, const vector<P> &solution) {
+void print_solution(const ll &N, const ll &M, const vector<stamp> &s, const vector<P> &solution) {
     for (ll k = 0; k < M; k++) {
         for (ll l = 0; l < s[k].size(); l++) {
             ll i = s[k].ps[l].i;
@@ -922,6 +898,142 @@ void dig_prob(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt199
     }
 }
 
+vector<P> calc_query_cells(const ll &N, const double &e, const vector<stamp> &s, mt19937 &rnd) {
+    vector<P> res;
+
+    for (ll i = 0; i < N; i++) {
+        for (ll j = 0; j < N; j++) {
+            if (next_long(rnd, 0, 2) == 1) {
+                res.emplace_back(i, j);
+            }
+        }
+    }
+
+    return res;
+}
+
+// ガウスの誤差関数の近似式
+double error_function(double x) {
+    double t = 1.0 / (1.0 + 0.5 * std::abs(x));
+    double ans = 1 - t * std::exp(-x * x - 1.26551223 +
+                                  t * (1.00002368 +
+                                       t * (0.37409196 +
+                                            t * (0.09678418 +
+                                                 t * (-0.18628806 +
+                                                      t * (0.27886807 +
+                                                           t * (-1.13520398 +
+                                                                t * (1.48851587 +
+                                                                     t * (-0.82215223 +
+                                                                          t * (0.17087277))))))))));
+    return x >= 0 ? ans : -ans;
+}
+
+// 正規分布の累積密度関数 (CDF) の近似式
+double normal_cdf(double x, double mean, double stddev) {
+    return 0.5 * (1 + error_function((x - mean) / (stddev * std::sqrt(2))));
+}
+
+double check_prob(const ll &v, const ll &k, const double &e, const ll &x) {
+    double mean = (k - v) * e + (1 - e) * v;
+    double stddev = std::sqrt(k * e * (1 - e));
+    if (x < EPS) {
+        return normal_cdf(x + 0.5, mean, stddev);
+    } else {
+        return normal_cdf(x + 0.5, mean, stddev) - normal_cdf(x - 0.5, mean, stddev);
+    }
+}
+
+pair<vector<P>, double> infer(const ll &N, const ll &M, const double &e, const vector<stamp> &s, const vector<pair<vector<P>, ll>> &queries) {
+    vector<pair<vector<P>, double>> candidates;
+
+    double total = 0.0;
+    for (ll si = 0; si <= N - s[0].h; si++) {
+        for (ll sj = 0; sj <= N - s[0].w; sj++) {
+            for (ll ti = 0; ti <= N - s[1].h; ti++) {
+                for (ll tj = 0; tj < N - s[1].w; tj++) {
+                    vector<P> solution;
+                    solution.emplace_back(si, sj);
+                    solution.emplace_back(ti, tj);
+                    vector<vector<short>> f2(N, vector<short>(N, 0));
+                    calc_field_status(N, M, s, solution, f2);
+
+                    double score = 0.0;
+                    for (ll l = 0; l < queries.size(); l++) {
+                        ll v = 0;
+                        for (auto p: queries[l].first) {
+                            v += f2[p.i][p.j];
+                        }
+                        ll k = queries[l].first.size();
+                        ll x = queries[l].second;
+                        double p = check_prob(v, k, e, x);
+
+                        score += log2(p);
+                    }
+
+                    score = pow(2.0, score);
+                    candidates.emplace_back(solution, score);
+                    total += score;
+                }
+            }
+        }
+    }
+
+    double best_score = 0.0;
+    vector<P> best_solution;
+    for (auto c: candidates) {
+        if (c.second > best_score) {
+            best_score = c.second;
+            best_solution = c.first;
+        }
+    }
+
+    return make_pair(best_solution, best_score / total);
+}
+
+void bayes(const ll &N, const ll &M, const double &e, const vector<stamp> &s, mt19937 &rnd) {
+    vector<pair<vector<P>, ll>> queries;
+    for (;;) {
+        vector<P> cells = calc_query_cells(N, e, s, rnd);
+
+        cout << "q " << cells.size();
+        for (auto p: cells) {
+            cout << " " << p.i << " " << p.j;
+        }
+        cout << endl;
+        flush(cout);
+        ll v;
+        cin >> v;
+
+        queries.emplace_back(cells, v);
+
+        pair<vector<P>, double> best = infer(N, M, e, s, queries);
+        vector<P> solution = best.first;
+        cout << "# " << best.second << endl;
+        if (best.second >= 0.98) {
+            vector<vector<short>> f2(N, vector<short>(N, 0));
+            calc_field_status(N, M, s, solution, f2);
+            vector<P> result;
+            for (ll i = 0; i < N; i++) {
+                for (ll j = 0; j < N; j++) {
+                    if (f2[i][j] > 0) {
+                        result.emplace_back(i, j);
+                    }
+                }
+            }
+            cout << "a " << result.size();
+            for (auto p: result) {
+                cout << " " << p.i << " " << p.j;
+            }
+            cout << endl;
+            flush(cout);
+            cin >> v;
+            if (v == 1) {
+                return;
+            }
+        }
+    }
+}
+
 int main() {
     mt19937 rnd(123);
     ios_base::sync_with_stdio(false);
@@ -947,7 +1059,11 @@ int main() {
         s.push_back(st);
     }
 
-    cont_beam(N, M, e, s, rnd);
+    if (M == 2) {
+        bayes(N, M, e, s, rnd);
+    } else {
+        cont_beam(N, M, e, s, rnd);
+    }
 
     return 0;
 }

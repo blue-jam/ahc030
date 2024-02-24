@@ -898,20 +898,6 @@ void dig_prob(const ll &N, const ll &M, const double &e, vector<stamp> &s, mt199
     }
 }
 
-vector<P> calc_query_cells(const ll &N, const double &e, const vector<stamp> &s, mt19937 &rnd) {
-    vector<P> res;
-
-    for (ll i = 0; i < N; i++) {
-        for (ll j = 0; j < N; j++) {
-            if (next_long(rnd, 0, 2) == 1) {
-                res.emplace_back(i, j);
-            }
-        }
-    }
-
-    return res;
-}
-
 // ガウスの誤差関数の近似式
 double error_function(double x) {
     double t = 1.0 / (1.0 + 0.5 * std::abs(x));
@@ -943,7 +929,7 @@ double check_prob(const ll &v, const ll &k, const double &e, const ll &x) {
     }
 }
 
-pair<vector<P>, double> infer(const ll &N, const ll &M, const double &e, const vector<stamp> &s, const vector<pair<vector<P>, ll>> &queries) {
+vector<pair<vector<P>, double>> build_candidates(const ll &N, const ll &M, const double &e, const vector<stamp> &s, const vector<pair<vector<P>, ll>> &queries) {
     vector<pair<vector<P>, double>> candidates;
 
     double total = 0.0;
@@ -978,6 +964,120 @@ pair<vector<P>, double> infer(const ll &N, const ll &M, const double &e, const v
         }
     }
 
+    for (auto &c: candidates) {
+        c.second /= total;
+    }
+
+    return candidates;
+}
+
+double calc_mutual_information_cost(const ll &N, const double &e, const vector<stamp> &s, const vector<vector<short>> &q, const vector<pair<vector<P>, double>> &candidates) {
+    double mutual_information = 0.0;
+    ll cnt = 0;
+    for (ll i = 0; i < N; i++) {
+        for (ll j = 0; j < N; j++) {
+            if (q[i][j] == 1) {
+                cnt += 1;
+            }
+        }
+    }
+
+    ll cells = 0;
+    for (ll k = 0; k < s.size(); k++) {
+        cells += s[k].size();
+    }
+
+    vector<double> py(cells * 2, 0);
+    for (auto c: candidates) {
+        double px = c.second;
+        if (px < EPS) continue;
+        vector<vector<short>> f2(N, vector<short>(N, 0));
+        calc_field_status(N, 2, s, c.first, f2);
+        ll v = 0;
+        for (ll i = 0; i < N; i++) {
+            for (ll j = 0; j < N; j++) {
+                if (q[i][j] == 1) {
+                    v += f2[i][j];
+                }
+            }
+        }
+        for (ll y = 0; y < py.size(); y++) {
+            double pxy = px * check_prob(v, cnt, e, y);
+            py[y] += pxy;
+        }
+    }
+
+    for (auto c: candidates) {
+        double px = c.second;
+        if (px < EPS) continue;
+        vector<vector<short>> f2(N, vector<short>(N, 0));
+        calc_field_status(N, 2, s, c.first, f2);
+        ll v = 0;
+        for (ll i = 0; i < N; i++) {
+            for (ll j = 0; j < N; j++) {
+                if (q[i][j] == 1) {
+                    v += f2[i][j];
+                }
+            }
+        }
+        for (ll y = 0; y < py.size(); y++) {
+            double pxy = px * check_prob(v, cnt, e, y);
+            if (pxy > EPS) {
+                mutual_information += pxy * log2(pxy / px / py[y]);
+            }
+        }
+    }
+    return mutual_information * std::sqrt(cnt);
+}
+
+vector<P> calc_query_cells(const ll &N, const double &e, const vector<stamp> &s, const vector<pair<vector<P>, ll>> &queries, mt19937 &rnd) {
+    vector<vector<short>> q(N, vector<short>(N, 0));
+
+    for (ll i = 0; i < N; i++) {
+        for (ll j = 0; j < N; j++) {
+            q[i][j] = next_long(rnd, 0, 2);
+        }
+    }
+
+    auto candidates = build_candidates(N, 2, e, s, queries);
+    cerr << "candidates: " << candidates.size() << endl;
+
+    bool updated;
+    do {
+        updated = false;
+        double cost = calc_mutual_information_cost(N, e, s, q, candidates);
+
+        for (ll i = 0; i < N; i++) {
+            for (ll j = 0; j < N; j++) {
+                ll old = q[i][j];
+                q[i][j] = 1 - q[i][j];
+                double new_cost = calc_mutual_information_cost(N, e, s, q, candidates);
+                if (new_cost > cost) {
+                    cost = new_cost;
+                    updated = true;
+                } else {
+                    q[i][j] = old;
+                }
+            }
+        }
+        cerr << "cost: " << cost << endl;
+    } while (updated);
+
+    vector<P> res;
+    for (ll i = 0; i < N; i++) {
+        for (ll j = 0; j < N; j++) {
+            if (q[i][j] == 1) {
+                res.emplace_back(i, j);
+            }
+        }
+    }
+
+    return res;
+}
+
+pair<vector<P>, double> infer(const ll &N, const ll &M, const double &e, const vector<stamp> &s, const vector<pair<vector<P>, ll>> &queries) {
+    vector<pair<vector<P>, double>> candidates = build_candidates(N, M, e, s, queries);
+
     double best_score = 0.0;
     vector<P> best_solution;
     for (auto c: candidates) {
@@ -987,13 +1087,13 @@ pair<vector<P>, double> infer(const ll &N, const ll &M, const double &e, const v
         }
     }
 
-    return make_pair(best_solution, best_score / total);
+    return make_pair(best_solution, best_score);
 }
 
 void bayes(const ll &N, const ll &M, const double &e, const vector<stamp> &s, mt19937 &rnd) {
     vector<pair<vector<P>, ll>> queries;
     for (;;) {
-        vector<P> cells = calc_query_cells(N, e, s, rnd);
+        vector<P> cells = calc_query_cells(N, e, s, queries, rnd);
 
         cout << "q " << cells.size();
         for (auto p: cells) {
